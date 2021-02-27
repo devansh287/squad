@@ -38,6 +38,25 @@ class Embedding(nn.Module):
 
         return emb
 
+class charEmbedding(nn.Module):
+    def __init__(self, word_vectors, char_vectors, hidden_size, drop_prob):
+        super(Embedding, self).__init__()
+        self.drop_prob = drop_prob
+        self.wordEmbed = nn.Embedding.from_pretrained(word_vectors)
+        self.charEmbed = 
+        self.proj = nn.Linear(word_vectors.size(1), hidden_size, bias=False)
+        self.hwy = HighwayEncoder(2, hidden_size)
+
+    def forward(self, x):
+        wordemb = self.wordEmbed(x)   # (batch_size, seq_len, embed_size)
+        charemb =
+        emb = torch.cat((wordemb, charemb), 2)
+        emb = F.dropout(emb, self.drop_prob, self.training)
+        emb = self.proj(emb)  # (batch_size, seq_len, hidden_size)
+        emb = self.hwy(emb)   # (batch_size, seq_len, hidden_size)
+
+        return emb
+
 
 class HighwayEncoder(nn.Module):
     """Encode an input sequence using a highway network.
