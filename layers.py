@@ -39,22 +39,40 @@ class Embedding(nn.Module):
         return emb
 
 class charEmbedding(nn.Module):
-    def __init__(self, word_vectors, char_vectors, hidden_size, drop_prob):
+    def __init__(self, word_vectors, char_vectors, emb_dim, hidden_size, drop_prob):
         super(Embedding, self).__init__()
+        #put the size of an embedding in emb_dim so that as we generate the CNN we need that
         self.drop_prob = drop_prob
         self.wordEmbed = nn.Embedding.from_pretrained(word_vectors)
-        self.charEmbed = 
+        self.charEmbed = nn.Embedding.from_pretrained(char_vectors)
+        self.convs = []
+        for i in range(2,5):
+            self.convs.append(nn.Conv1d(in_channels=emb_dim, out_channels=1, kernel_size=i))
+        self.activation = nn.ReLU()
+        self.pooling = nn.AdaptiveMaxPool1d(1)
+        #self.charEmbed = nn.Conv1d(in_channels = 1, out_channels = 1)
+        #we might have to set the channels to zero
         self.proj = nn.Linear(word_vectors.size(1), hidden_size, bias=False)
         self.hwy = HighwayEncoder(2, hidden_size)
 
-    def forward(self, x):
+    def forward(self, x, chars):
+        #char2idx list of all indices of the characters
         wordemb = self.wordEmbed(x)   # (batch_size, seq_len, embed_size)
-        charemb =
+        charemb = self.charEmbed(chars)
+        char_pooled = []
+        word_pooled = []
+        for conv in self.convs:
+            char_val = self.pooling(self.activation(conv(charemb)))
+            char_pooled.append(char_val)
+            word_val = self.pooling(self.activation(conv(wordemb)))
+            word_pooled.append(word_val)
+        charemb = torch.cat(char_pooled,1)
+        wordemb = torch.cat(word_pooled,1)
+        #To keep the character and word embeddings to be of the same size, I am using CNNs on the Word Embedding too.
         emb = torch.cat((wordemb, charemb), 2)
         emb = F.dropout(emb, self.drop_prob, self.training)
         emb = self.proj(emb)  # (batch_size, seq_len, hidden_size)
         emb = self.hwy(emb)   # (batch_size, seq_len, hidden_size)
-
         return emb
 
 
