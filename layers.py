@@ -74,11 +74,12 @@ class charEmbedding(nn.Module):
 
         output_dim = char_emb.size(1)
         char_emb = char_emb.view(batch_size, seq_len, output_dim)  # (batch_size, seq_len, num_kernels)
+
+        char_emb = char_emb.cuda()
         emb = torch.cat((word_emb, char_emb), 2) # (batch_size, seq_len, word_embed_size + num_kernels)
         emb = F.dropout(emb, self.drop_prob, self.training)
         emb = self.proj(emb)  # (batch_size, seq_len, hidden_size)
         emb = self.hwy(emb)   # (batch_size, seq_len, hidden_size)
-        emb = emb.cuda()
         return emb
 
 
