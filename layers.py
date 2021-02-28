@@ -39,37 +39,38 @@ class Embedding(nn.Module):
         return emb
 
 class charEmbedding(nn.Module):
-    def __init__(self, word_vectors, char_vectors, emb_dim, hidden_size, drop_prob):
-        super(Embedding, self).__init__()
-        #put the size of an embedding in emb_dim so that as we generate the CNN we need that
+    def __init__(self, word_vectors, char_vectors, emb_size, hidden_size, drop_prob):
+        super(charEmbedding, self).__init__()
         self.drop_prob = drop_prob
         self.wordEmbed = nn.Embedding.from_pretrained(word_vectors)
-        self.charEmbed = nn.Embedding.from_pretrained(char_vectors)
+        self.charVectors = nn.Embedding.from_pretrained(char_vectors)
         self.convs = []
-        for i in range(2,5):
-            self.convs.append(nn.Conv1d(in_channels=emb_dim, out_channels=1, kernel_size=i))
-        self.activation = nn.ReLU()
+        num_kernels = 0
+        for i in range(2, 5):
+            self.convs.append(nn.Conv1d(in_channels=emb_size, out_channels=1, kernel_size=i))
+            num_kernels += 1
+        self.ReLU = nn.ReLU()
         self.pooling = nn.AdaptiveMaxPool1d(1)
         #self.charEmbed = nn.Conv1d(in_channels = 1, out_channels = 1)
         #we might have to set the channels to zero
-        self.proj = nn.Linear(word_vectors.size(1), hidden_size, bias=False)
+        self.proj = nn.Linear(word_vectors.size(1) + num_kernels, hidden_size, bias=False)
         self.hwy = HighwayEncoder(2, hidden_size)
 
-    def forward(self, x, chars):
-        #char2idx list of all indices of the characters
-        wordemb = self.wordEmbed(x)   # (batch_size, seq_len, embed_size)
-        charemb = self.charEmbed(chars)
+    def forward(self, word_idx, char_idx):
+        word_emb = self.wordEmbed(word_idx)     # (batch_size, seq_len, word_embed_size)
+        char_vec = self.charVectors(char_idx)   # (batch_sze, seq_len, max_word_len, char_embed_size)
+        char_vec = torch.transpose(char_vec, 2, 3)  # (batch_size, seq_len, char_embed_size, max_word_len)
+        (batch_size, seq_len, embed_size, max_word_len) = char_vec.size()
+        char_vec = char_vec.view(batch_size * seq_len, embed_size, max_word_len)
         char_pooled = []
-        word_pooled = []
         for conv in self.convs:
-            char_val = self.pooling(self.activation(conv(charemb)))
+            char_val = self.pooling(self.ReLU(conv(char_vec)))
             char_pooled.append(char_val)
-            word_val = self.pooling(self.activation(conv(wordemb)))
-            word_pooled.append(word_val)
-        charemb = torch.cat(char_pooled,1)
-        wordemb = torch.cat(word_pooled,1)
-        #To keep the character and word embeddings to be of the same size, I am using CNNs on the Word Embedding too.
-        emb = torch.cat((wordemb, charemb), 2)
+        char_emb = torch.cat(char_pooled, 1)  # (batch_size*seq_len, num_kernels, 1)
+        char_emb = char_emb.squeeze(2)  # (batch_size*seq_len, num_kernels)
+        output_dim = char_emb.size(1)
+        char_emb = char_emb.view(batch_size, seq_len, output_dim)  # (batch_size, seq_len, num_kernels)
+        emb = torch.cat((word_emb, char_emb), 2) # (batch_size, seq_len, word_embed_size + num_kernels)
         emb = F.dropout(emb, self.drop_prob, self.training)
         emb = self.proj(emb)  # (batch_size, seq_len, hidden_size)
         emb = self.hwy(emb)   # (batch_size, seq_len, hidden_size)
