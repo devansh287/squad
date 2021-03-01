@@ -64,7 +64,7 @@ class charEmbedding(nn.Module):
         (batch_size, seq_len, embed_size, max_word_len) = char_vec.size()
         char_vec = char_vec.view(batch_size * seq_len, embed_size, max_word_len)
         char_pooled = []
-        char_vec = char_vec.cpu()
+        #char_vec = char_vec.cpu()
 
         for conv in self.convs:
             char_val = self.pooling(self.ReLU(conv(char_vec)))
@@ -75,7 +75,7 @@ class charEmbedding(nn.Module):
         output_dim = char_emb.size(1)
         char_emb = char_emb.view(batch_size, seq_len, output_dim)  # (batch_size, seq_len, num_kernels)
 
-        char_emb = char_emb.cuda()
+        #char_emb = char_emb.cuda()
         emb = torch.cat((word_emb, char_emb), 2) # (batch_size, seq_len, word_embed_size + num_kernels)
         emb = F.dropout(emb, self.drop_prob, self.training)
         emb = self.proj(emb)  # (batch_size, seq_len, hidden_size)
@@ -225,6 +225,51 @@ class BiDAFAttention(nn.Module):
         s = s0 + s1 + s2 + self.bias
 
         return s
+
+class CoAttention(nn.Module):
+    """
+    Co-Attention
+    """
+    def __init__(self, hidden_size, drop_prob=0.1):
+        super(CoAttention, self).__init__()
+        self.hidden_proj = nn.Linear(in_features=hidden_size, out_features=hidden_size)
+        self.tanh = nn.Tanh()
+        self.c_sentinel = nn.Parameter(torch.rand(hidden_size))
+        self.q_sentinel = nn.Parameter(torch.rand(hidden_size))
+        self.a_softmax = nn.Softmax(2)
+        self.b_softmax = nn.Softmax(1)
+        self.biLSTM = nn.LSTM(input_size=2*hidden_size, hidden_size=2*hidden_size, num_layers=1, dropout=drop_prob, bidirectional=True)
+
+    def forward(self, c, q, c_mask, q_mask):
+        (batch_size, q_len, h_size) = q.size()
+        c_len = c.size(1)
+
+        q_prime = self.tanh(self.hidden_proj(q))  # (batch_size, q_len, h_size)
+        q_sentinel = self.q_sentinel.expand(batch_size, 1, h_size)  # (batch_size, 1, h_size)
+        q_prime = torch.cat((q_prime, q_sentinel), 1)  # (batch_size, q_len + 1, h_size)
+
+        c_sentinel = self.c_sentinel.expand(batch_size, 1, h_size)  # (batch_size, 1, h_size)
+        c = torch.cat((c, c_sentinel), 1)  # (batch_size, c_len + 1, h_size)
+
+        # Affinity Matrix
+        affinity = torch.matmul(c, q_prime.transpose(1, 2))  # (batch_size, c_len + 1, q_len + 1)
+
+        # C2Q attention
+        alpha = self.a_softmax(affinity)  # (batch_size, c_len + 1, q_len + 1)
+        a = torch.matmul(alpha, q_prime)  # (batch_size, c_len + 1, h_size)
+
+        # Q2C attention
+        beta = self.b_softmax(affinity)  # (batch_size, c_len + 1, q_len + 1)
+        b = torch.matmul(beta.transpose(1, 2), c)  # (batch_size, q_len + 1, h_size)
+
+        s = torch.matmul(alpha[:, :-1, :], b)  # (batch_size, c_len, h_size)
+
+        # BiLISTM layer
+        lstm_input = torch.cat((s, a[:, :-1, :]), 2)  # (batch_size, c_len, 2 * h_size)
+        h0 = torch.randn(2, c_len, 2 * h_size)
+        c0 = torch.randn(2, c_len, 2 * h_size)
+        u, (hn, cn) = self.biLSTM(lstm_input, (h0, c0))  # (batch_size, c_len, 4 * h_size)
+        return u
 
 
 class BiDAFOutput(nn.Module):
