@@ -266,8 +266,8 @@ class CoAttention(nn.Module):
 
         # BiLISTM layer
         lstm_input = torch.cat((s, a[:, :-1, :]), 2)  # (batch_size, c_len, 2 * h_size)
-        h0 = torch.randn(2, c_len, 2 * h_size)
-        c0 = torch.randn(2, c_len, 2 * h_size)
+        h0 = torch.randn(2, c_len, 2 * h_size).cuda()
+        c0 = torch.randn(2, c_len, 2 * h_size).cuda()
         u, (hn, cn) = self.biLSTM(lstm_input, (h0, c0))  # (batch_size, c_len, 4 * h_size)
         return u
 
