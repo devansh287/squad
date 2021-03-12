@@ -64,6 +64,7 @@ def main(args):
                       emb_size=char_vectors.size(1),
                       hidden_size=args.hidden_size,
                       drop_prob=args.drop_prob)
+    print("YOU ARE ENTERING THE QA NET MODEL TRAINING_____________________________________________________________________")
     model = nn.DataParallel(model, args.gpu_ids)
     if args.load_path:
         log.info(f'Loading checkpoint from {args.load_path}...')
