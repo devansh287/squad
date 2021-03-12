@@ -344,25 +344,27 @@ class QAEncoder(nn.Module):
                                    out_channels=hidden_size,
                                    kernel_size=self.kernel_size)
         self.convs = []
+        self.convs.append(self.init_conv)
         for i in range(num_layers-1):
             self.convs.append(nn.Conv1d(in_channels=hidden_size,
                                         out_channels=hidden_size,
                                         kernel_size=self.kernel_size))
         # Multi-Head Self Attention
-        self.att = nn.MultiheadAttention(embed_dim=hidden_size,
-                                         num_heads=self.num_heads,
-                                         dropout=drop_prob)
+        self.att = nn.MultiheadAttention(embed_dim=hidden_size, num_heads=self.num_heads, dropout=drop_prob)
+        self.pos_encoder = PositionalEncoding(hidden_size, dropout=drop_prob)
         #Feedforward Network
         self.feedforward = nn.Linear(hidden_size, hidden_size)
         self.relu = nn.ReLU()
 
     def forward(self, x, lengths):
         # Convolution layers
-        x = self.init_layer_norm(x)     #(batch_size, 
-        x = self.init_conv(x)
-        start_state = x
+        #x = self.init_layer_norm(x)     #(batch_size, 
+        #x = self.init_conv(x)
+        x = self.pos_encoder(x)
         for conv in self.convs:
+            start_state = x
             x = self.layer_norm(x)
+
             x = conv(x)
             x = x + start_state
 
@@ -399,3 +401,21 @@ class QAOutput(nn.Module):
         log_p1 = masked_softmax(start_logits.squeeze(), mask, log_softmax=True)
         log_p2 = masked_softmax(end_logits.squeeze(), mask, log_softmax=True)
         return log_p1, log_p2
+
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
