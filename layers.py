@@ -226,6 +226,7 @@ class BiDAFAttention(nn.Module):
 
         return s
 
+
 class CoAttention(nn.Module):
     """
     Co-Attention
@@ -308,4 +309,93 @@ class BiDAFOutput(nn.Module):
         log_p1 = masked_softmax(logits_1.squeeze(), mask, log_softmax=True)
         log_p2 = masked_softmax(logits_2.squeeze(), mask, log_softmax=True)
 
+        return log_p1, log_p2
+
+
+"""
+---------------------------- YOU ARE ENTERING TRANSFORMER ZONE ---------------------------
+"""
+
+
+
+class QAEncoder(nn.Module):
+    """
+    General QANet Encoder Block
+    Instantiated many times in QAnet:
+        One encoder each for encoding query / context embeddings.
+        A batch of encoders in the model. This batch is reused 3 times.
+    Intended to handle input size different to hidden size (this may not be necessary for QAnet).
+    """
+    def __init__(self,
+                 input_size,
+                 hidden_size,
+                 num_layers,
+                 drop_prob=0.):
+        super(QAEncoder, self).__init__()
+        # Hyperparameters
+        self.kernel_size = 7 # paper suggest constant kernel size of 7 for both embeding encoder & model encoder
+        self.num_heads = 8 # Likewise, this was suggested by the QANet paper
+        self.drop_prob = drop_prob
+        # Layer Norms - N.B. designed to handle input size different to hidden size
+        self.init_layer_norm = nn.LayerNorm(input_size)
+        self.layer_norm = nn.LayerNorm(hidden_size)
+        # Convolutions - N.B. designed to handle input size different to hidden size
+        self.init_conv = nn.Conv1d(in_channels=input_size,
+                                   out_channels=hidden_size,
+                                   kernel_size=self.kernel_size)
+        self.convs = []
+        for i in range(num_layers-1):
+            self.convs.append(nn.Conv1d(in_channels=hidden_size,
+                                        out_channels=hidden_size,
+                                        kernel_size=self.kernel_size))
+        # Multi-Head Self Attention
+        self.att = nn.MultiheadAttention(embed_dim=hidden_size,
+                                         num_heads=self.num_heads,
+                                         dropout=drop_prob)
+        #Feedforward Network
+        self.feedforward = nn.Linear(hidden_size, hidden_size)
+        self.relu = nn.ReLU()
+
+    def forward(self, x, lengths):
+        # Convolution layers
+        x = self.init_layer_norm(x)     #(batch_size, 
+        x = self.init_conv(x)
+        start_state = x
+        for conv in self.convs:
+            x = self.layer_norm(x)
+            x = conv(x)
+            x = x + start_state
+
+        # Self-attention layer
+        start_state = x
+        x = self.layer_norm(x)
+        x = self.att(x)
+        x = x + start_state
+
+        # Feedforward layer (preliminarily a single-layer perceptron)
+        start_state = x
+        x = self.layer_norm(x)
+        x = self.feedforward(x)
+        x = self.relu(x)
+        x = x + start_state
+
+        return x
+
+
+class QAOutput(nn.Module):
+    """
+    QANet output layer - adapted for compatibility with BiDAF output
+    """
+    def __init__(self, hidden_size):
+        super(QAOutput, self).__init__()
+        self.linear = nn.Linear(hidden_size*2, 1)
+
+    def forward(self, start, end, mask):
+        # Shapes: (batch_size, seq_len, 1)
+        start_logits = self.linear(start)
+        end_logits = self.linear(end)
+
+        # Shapes: (batch_size, seq_len)
+        log_p1 = masked_softmax(start_logits.squeeze(), mask, log_softmax=True)
+        log_p2 = masked_softmax(end_logits.squeeze(), mask, log_softmax=True)
         return log_p1, log_p2

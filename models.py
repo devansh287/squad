@@ -117,3 +117,79 @@ class charBiDAF(nn.Module):
         out = self.out(att, mod, c_mask)  # 2 tensors, each (batch_size, c_len)
 
         return out
+
+
+"""
+---------------------------- YOU ARE ENTERING TRANSFORMER ZONE ---------------------------
+"""
+
+class QANet(nn.Module):
+    """
+    Inspired by: https://arxiv.org/pdf/1804.09541.pdf
+    """
+    def __init__(self, word_vectors, char_vectors, emb_size, hidden_size, drop_prob=0.):
+        super(QANet, self).__init__()
+        self.num_model_blocks = 7       # as suggested by QANet paper
+        self.encoder_conv_layers = 4    # as suggested by QANet paper
+        self.model_conv_layers = 2      # as suggested by QANet paper
+
+        self.emb = layers.charEmbedding(word_vectors=word_vectors,
+                                        char_vectors=char_vectors,
+                                        emb_size=emb_size,
+                                        hidden_size=hidden_size,
+                                        drop_prob=drop_prob)
+
+        self.enc = layers.QAEncoder(input_size=hidden_size,
+                                    hidden_size=hidden_size,
+                                    num_layers=self.encoder_conv_layers,
+                                    drop_prob=drop_prob)
+
+        self.att = layers.BiDAFAttention(hidden_size=hidden_size,
+                                         drop_prob=drop_prob)
+
+        self.model_blocks = []
+        for i in range(self.num_model_blocks):
+            self.model_blocks.append(layers.QAEncoder(input_size=hidden_size,
+                                                      hidden_size=hidden_size,
+                                                      num_layers=self.model_conv_layers,
+                                                      drop_prob=drop_prob))
+
+        # Caution: may have to write new output block in layers.py
+        self.out = layers.QAOutput(hidden_size=hidden_size)
+
+    def forward(self, cw_idxs, cc_idxs, qw_idxs, qc_idxs):
+        c_mask = torch.zeros_like(cw_idxs) != cw_idxs
+        q_mask = torch.zeros_like(qw_idxs) != qw_idxs
+
+        # Embedding
+        c_emb = self.emb(cw_idxs, cc_idxs)         # (batch_size, c_len, hidden_size)
+        q_emb = self.emb(qw_idxs, qc_idxs)         # (batch_size, q_len, hidden_size)
+
+        # Encoding
+        c_enc = self.enc(c_emb)     # (batch_size, c_len, hidden_size)
+        q_enc = self.enc(q_emb)     # (batch_size, q_len, hidden_size)
+
+        # Context-query attention
+        att = self.att(c_enc, q_enc,
+                       c_mask, q_mask)   # (batch_size, c_len, hidden_size)
+
+        # Model blocks - repeat 3 times with same parameters
+        block1 = att
+        for model_block in self.model_blocks:
+            block1 = model_block(block1)
+
+        block2 = block1
+        for model_block in self.model_blocks:
+            block2 = model_block(block2)
+
+        block3 = block2
+        for model_block in self.model_blocks:
+            block3 = model_block(block3)
+
+        # Concatenate model blocks to obtain start and end representations
+        start = torch.cat(block1, block2)
+        end = torch.cat(block2, block3)
+
+        out = self.out(start, end, c_mask)
+
+        return out
