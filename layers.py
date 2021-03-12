@@ -356,7 +356,7 @@ class QAEncoder(nn.Module):
         self.feedforward = nn.Linear(hidden_size, hidden_size)
         self.relu = nn.ReLU()
 
-    def forward(self, x, lengths):
+    def forward(self, x):
         # Convolution layers
         #x = self.init_layer_norm(x)     #(batch_size, 
         #x = self.init_conv(x)
