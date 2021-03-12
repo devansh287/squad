@@ -371,7 +371,7 @@ class QAEncoder(nn.Module):
         # Self-attention layer
         start_state = x
         x = self.layer_norm(x)
-        x = self.att(x)
+        #x = self.att(x)
         x = x + start_state
 
         # Feedforward layer (preliminarily a single-layer perceptron)
