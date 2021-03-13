@@ -501,10 +501,10 @@ class MultiHeadSelfAttention(nn.Module):
         self.num_heads = num_heads
         self.d_k = self.hidden_size // self.num_heads
 
-        self.key_lin = nn.Linear(hidden_size, hidden_size).to(device)
-        self.query_lin = nn.Linear(hidden_size, hidden_size).to(device)
-        self.val_lin = nn.Linear(hidden_size, hidden_size).to(device)
-        self.dropout = nn.Dropout(drop_prob).to(device)
+        self.key_lin = nn.Linear(hidden_size, hidden_size)
+        self.query_lin = nn.Linear(hidden_size, hidden_size)
+        self.val_lin = nn.Linear(hidden_size, hidden_size)
+        self.dropout = nn.Dropout(drop_prob)
         self.out = nn.Linear(hidden_size, hidden_size)
 
     def forward(self, x, mask=None):
@@ -523,7 +523,6 @@ class MultiHeadSelfAttention(nn.Module):
 
         result = scores.transpose(1,2).contiguous()
         result = result.view(batch_size, seq_len, self.hidden_size)
-        result.to(back)
         output = self.out(result)
 
         return output
