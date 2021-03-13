@@ -440,6 +440,7 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x):
         self.pe.to(device)
+        x.to(device)
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
