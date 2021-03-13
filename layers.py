@@ -507,7 +507,7 @@ class MultiHeadSelfAttention(nn.Module):
         self.query_lin = nn.Linear(hidden_size, hidden_size).to(device)
         self.val_lin = nn.Linear(hidden_size, hidden_size).to(device)
         self.dropout = nn.Dropout(drop_prob)
-        self.out = nn.Linear(hidden_size, hidden_size)
+        self.out = nn.Linear(hidden_size, hidden_size).to(device)
 
     def forward(self, x, mask=None):
         batch_size = x.size(0)
