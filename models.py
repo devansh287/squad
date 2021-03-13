@@ -129,7 +129,7 @@ class QANet(nn.Module):
     """
     def __init__(self, word_vectors, char_vectors, emb_size, hidden_size, drop_prob=0.):
         super(QANet, self).__init__()
-        self.num_model_blocks = 7       # as suggested by QANet paper
+        self.num_model_blocks = 4       # as suggested by QANet paper
         self.encoder_conv_layers = 4    # as suggested by QANet paper
         self.model_conv_layers = 2      # as suggested by QANet paper
 
