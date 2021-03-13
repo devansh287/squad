@@ -503,7 +503,8 @@ class ContextQueryAttention(nn.Module):
         c_len, q_len = c.size(1), q.size(1)
         c = F.dropout(c, self.drop_prob, self.training).cpu()  # (bs, c_len, hid_size)
         q = F.dropout(q, self.drop_prob, self.training).cpu()  # (bs, q_len, hid_size)
-
+        c = c.cpu()
+        q = q.cpu()
         # Shapes: (batch_size, c_len, q_len)
         s0 = torch.matmul(c, self.c_weight).cpu().expand([-1, -1, q_len])
         s1 = torch.matmul(q, self.q_weight).cpu().transpose(1, 2) \
