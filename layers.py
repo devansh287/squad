@@ -335,40 +335,30 @@ class QAEncoder(nn.Module):
         self.num_heads = 10 # Likewise, this was suggested by the QANet paper
         self.drop_prob = drop_prob
         # Layer Norms - N.B. designed to handle input size different to hidden size
-        self.init_layer_norm = nn.LayerNorm(input_size)
-        self.layer_norm = nn.LayerNorm(hidden_size)
+        self.init_layer_norm = nn.LayerNorm(input_size).to(device)
+        self.layer_norm = nn.LayerNorm(hidden_size).to(device)
         # Convolutions - N.B. designed to handle input size different to hidden size
         self.init_conv = nn.Conv1d(in_channels=input_size,
                                    out_channels=hidden_size,
                                    kernel_size=self.kernel_size,
                                    padding=3,
-                                   groups=hidden_size)
+                                   groups=hidden_size).to(device)
         self.convs = []
-        self.convs.append(self.init_conv)
         for i in range(num_layers-1):
             self.convs.append(nn.Conv1d(in_channels=hidden_size,
                                         out_channels=hidden_size,
                                         kernel_size=self.kernel_size,
                                         padding=3,
-                                        groups=hidden_size))
+                                        groups=hidden_size).to(device))
         # Multi-Head Self Attention
-        self.att = MultiHeadSelfAttention(hidden_size, self.num_heads, drop_prob=drop_prob)
-        self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob)
+        self.att = MultiHeadSelfAttention(hidden_size, self.num_heads, drop_prob=drop_prob).to(device)
+        self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob).to(device)
         #Feedforward Network
-        self.feedforward = nn.Linear(hidden_size, hidden_size)
-        self.relu = nn.ReLU()
+        self.feedforward = nn.Linear(hidden_size, hidden_size).to(device)
+        self.relu = nn.ReLU().to(device)
 
     def forward(self, x):
         # Convolution layers
-        self.pos_encoder.to(device)
-        self.init_layer_norm.to(device)
-        self.init_conv.to(device)
-        for conv in self.convs:
-            conv.to(device)
-            self.layer_norm.to(device)
-        x = x.to(device)
-
-
         x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
         x = self.init_layer_norm(x)     # (batch_size, seq_len, input_size)
         x = torch.transpose(x, 1, 2)    # (batch_size, input_size, seq_len)
