@@ -368,7 +368,7 @@ class QAEncoder(nn.Module):
         x = torch.transpose(x, 1, 2)    # (batch_size, input_size, seq_len)
         x = self.init_conv(x)           # (batch_size, hidden_size, seq_len)
         x = torch.transpose(x, 1, 2)
-
+        x = x.cuda()
         for conv in self.convs:
             start_state = x
             x = self.layer_norm(x)
