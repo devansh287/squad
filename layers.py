@@ -336,29 +336,38 @@ class QAEncoder(nn.Module):
         self.num_heads = 10 # Likewise, this was suggested by the QANet paper
         self.drop_prob = drop_prob
         # Layer Norms - N.B. designed to handle input size different to hidden size
-        self.init_layer_norm = nn.LayerNorm(input_size).to(device)
-        self.layer_norm = nn.LayerNorm(hidden_size).to(device)
+        self.init_layer_norm = nn.LayerNorm(input_size)
+        self.layer_norm = nn.LayerNorm(hidden_size)
         # Convolutions - N.B. designed to handle input size different to hidden size
         self.init_conv = nn.Conv1d(in_channels=input_size,
                                    out_channels=hidden_size,
                                    kernel_size=self.kernel_size,
                                    padding=3,
-                                   groups=hidden_size).to(device)
+                                   groups=hidden_size)
         self.convs = []
         for i in range(num_layers-1):
             self.convs.append(nn.Conv1d(in_channels=hidden_size,
                                         out_channels=hidden_size,
                                         kernel_size=self.kernel_size,
                                         padding=3,
-                                        groups=hidden_size).to(device))
+                                        groups=hidden_size))
         # Multi-Head Self Attention
         self.att = MultiHeadSelfAttention(hidden_size, self.num_heads, drop_prob=drop_prob)
         self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob)
         #Feedforward Network
-        self.feedforward = nn.Linear(hidden_size, hidden_size).to(device)
+        self.feedforward = nn.Linear(hidden_size, hidden_size)
         self.relu = nn.ReLU()
 
     def forward(self, x):
+        #convert to cuda
+        self.init_layer_norm.to(device)
+        self.layer_norm.to(device)
+        self.init_conv.to(device)
+        for conv in self.convs:
+            conv.to(device)
+        self.feedforward.to(device)
+
+
         # Convolution layers
         x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
         x = self.init_layer_norm(x)     # (batch_size, seq_len, input_size)
@@ -386,9 +395,15 @@ class QAEncoder(nn.Module):
         x = self.feedforward(x)
         x = self.relu(x)
         x = x + start_state
-        x.cpu()
+        x.to(back)
+        self.init_layer_norm.to(back)
+        self.layer_norm.to(back)
+        self.init_conv.to(back)
+        for conv in self.convs:
+            conv.to(back)
+        self.feedforward.to(back)
         return x
-
+   
 
 class QAOutput(nn.Module):
     """
@@ -415,7 +430,7 @@ class PositionalEncoding(nn.Module):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
-        pe = torch.zeros(max_len, d_model).to(device)
+        pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
@@ -424,7 +439,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        x = x.to(device)
+        self.pe.to(device)
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
@@ -503,15 +518,22 @@ class MultiHeadSelfAttention(nn.Module):
         self.num_heads = num_heads
         self.d_k = self.hidden_size // self.num_heads
 
-        self.key_lin = nn.Linear(hidden_size, hidden_size).to(device)
-        self.query_lin = nn.Linear(hidden_size, hidden_size).to(device)
-        self.val_lin = nn.Linear(hidden_size, hidden_size).to(device)
+        self.key_lin = nn.Linear(hidden_size, hidden_size)
+        self.query_lin = nn.Linear(hidden_size, hidden_size)
+        self.val_lin = nn.Linear(hidden_size, hidden_size)
         self.dropout = nn.Dropout(drop_prob)
-        self.out = nn.Linear(hidden_size, hidden_size).to(device)
+        self.out = nn.Linear(hidden_size, hidden_size)
 
     def forward(self, x, mask=None):
         batch_size = x.size(0)
         seq_len = x.size(1)
+
+        #converting to cuda
+        self.key_lin.to(device)
+        self.query_lin.to(device)
+        self.val_lin.to(device)
+        self.out.to(device)
+
         key = self.key_lin(x)
         key = key.view(batch_size, seq_len, self.num_heads, self.d_k)
         query = self.query_lin(x).view(batch_size, seq_len, self.num_heads, self.d_k)
@@ -526,6 +548,12 @@ class MultiHeadSelfAttention(nn.Module):
         result = scores.transpose(1,2).contiguous()
         result = result.view(batch_size, seq_len, self.hidden_size)
         output = self.out(result)
+
+        #converting back
+        self.key_lin.to(back)
+        self.query_lin.to(back)
+        self.val_lin.to(back)
+        self.out.to(back)
 
         return output
 
