@@ -166,6 +166,7 @@ class QANet(nn.Module):
         q_emb = self.emb(qw_idxs, qc_idxs)         # (batch_size, q_len, hidden_size)
 
         # Encoding
+        c_emb = c_emb.cuda()
         self.enc = self.enc.cuda()
         c_enc = self.enc(c_emb)     # (batch_size, c_len, hidden_size)
         q_enc = self.enc(q_emb)     # (batch_size, q_len, hidden_size)
