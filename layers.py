@@ -362,14 +362,14 @@ class QAEncoder(nn.Module):
 
     def forward(self, x):
         # Convolution layers
-
         x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
-        x = self.init_layer_norm(x)     # (batch_size, seq_len, input_size)
 
+        x = x.cpu()     # REMOVE FOR LOCAL TRAINING
+        x = self.init_layer_norm(x)     # (batch_size, seq_len, input_size)
         x = torch.transpose(x, 1, 2)    # (batch_size, input_size, seq_len)
         x = self.init_conv(x)           # (batch_size, hidden_size, seq_len)
         x = torch.transpose(x, 1, 2)
-        x = x.cpu()     # REMOVE FOR LOCAL TRAINING
+
         for conv in self.convs:
             start_state = x
             x = self.layer_norm(x)
