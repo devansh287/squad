@@ -360,12 +360,14 @@ class QAEncoder(nn.Module):
 
     def forward(self, x):
         #convert to cuda
+        """
         self.init_layer_norm = self.init_layer_norm.to(device)
-        self.layer_norm=self.layer_norm.to(device)
-        self.init_conv=self.init_conv.to(device)
-        for conv in self.convs:
-            conv=conv.to(device)
+        self.layer_norm = self.layer_norm.to(device)
+        self.init_conv = self.init_conv.to(device)
+        for i in range(len(self.convs)):
+            self.convs[i] = self.convs[i].to(device)
         self.feedforward=self.feedforward.to(device)
+        """
 
         # Convolution layers
         x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
@@ -394,13 +396,16 @@ class QAEncoder(nn.Module):
         x = self.feedforward(x)
         x = self.relu(x)
         x = x + start_state
+
+        """
         x = x.cpu()
         self.init_layer_norm  = self.init_layer_norm.cpu()
         self.layer_norm=self.layer_norm.cpu()
         self.init_conv=self.init_conv.cpu()
-        for conv in self.convs:
-            conv=conv.cpu()
+        for i in range(len(self.convs)):
+            self.convs[i] = self.convs[i].cpu()
         self.feedforward=self.feedforward.cpu()
+        """
         return x
    
 
@@ -438,10 +443,10 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        x.to(device)
+        #x.to(device)
         self.pe = self.pe.to(device)
         x = x + self.pe[:x.size(0), :]
-        x = x.cpu()
+        #x = x.cpu()
         self.pe = self.pe.cpu()
         return self.dropout(x)
 
@@ -531,10 +536,12 @@ class MultiHeadSelfAttention(nn.Module):
         seq_len = x.size(1)
 
         #converting to cuda
+        """
         self.key_lin=self.key_lin.to(device)
         self.query_lin=self.query_lin.to(device)
         self.val_lin=self.val_lin.to(device)
         self.out=self.out.to(device)
+        """
 
         key = self.key_lin(x)
         key = key.view(batch_size, seq_len, self.num_heads, self.d_k)
@@ -552,12 +559,15 @@ class MultiHeadSelfAttention(nn.Module):
         output = self.out(result)
 
         #converting back
+        """
         self.key_lin=self.key_lin.cpu()
         self.query_lin=self.query_lin.cpu()
         self.val_lin=self.val_lin.cpu()
         self.out=self.out.cpu()
+        """
 
         return output
+
 
 def attention(q, k, v, d_k, mask=None, dropout=None):
     """
