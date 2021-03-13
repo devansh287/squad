@@ -343,7 +343,7 @@ class QAEncoder(nn.Module):
                                    out_channels=hidden_size,
                                    kernel_size=self.kernel_size,
                                    padding=3,
-                                   groups=hidden_size)
+                                   groups=hidden_size).to(device)
         self.convs = []
         for i in range(num_layers-1):
             self.convs.append(nn.Conv1d(in_channels=hidden_size,
