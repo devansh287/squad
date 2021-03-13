@@ -12,6 +12,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from util import masked_softmax
 
 device = torch.device("cuda:0")
+back = torch.device("cpu:0")
 class Embedding(nn.Module):
     """Embedding layer used by BiDAF, without the character-level component.
 
@@ -384,7 +385,7 @@ class QAEncoder(nn.Module):
         x = self.feedforward(x)
         x = self.relu(x)
         x = x + start_state
-
+        x.to(back)
         return x
 
 
@@ -522,7 +523,7 @@ class MultiHeadSelfAttention(nn.Module):
 
         result = scores.transpose(1,2).contiguous()
         result = result.view(batch_size, seq_len, self.hidden_size)
-
+        result.to(back)
         output = self.out(result)
 
         return output
