@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from util import masked_softmax
 
-
+device = torch.device("cuda:0")
 class Embedding(nn.Module):
     """Embedding layer used by BiDAF, without the character-level component.
 
@@ -316,8 +316,6 @@ class BiDAFOutput(nn.Module):
 ---------------------------- YOU ARE ENTERING TRANSFORMER ZONE ---------------------------
 """
 
-
-
 class QAEncoder(nn.Module):
     """
     General QANet Encoder Block
@@ -362,8 +360,6 @@ class QAEncoder(nn.Module):
 
     def forward(self, x):
         # Convolution layers
-        device = torch.device("cuda:0")
-        
         self.pos_encoder.to(device)
         self.init_layer_norm.to(device)
         self.init_conv.to(device)
@@ -371,8 +367,9 @@ class QAEncoder(nn.Module):
             conv.to(device)
             self.layer_norm.to(device)
         x = x.to(device)
-        x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
 
+
+        x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
         x = self.init_layer_norm(x)     # (batch_size, seq_len, input_size)
         x = torch.transpose(x, 1, 2)    # (batch_size, input_size, seq_len)
         x = self.init_conv(x)           # (batch_size, hidden_size, seq_len)
@@ -513,11 +510,11 @@ class MultiHeadSelfAttention(nn.Module):
         self.num_heads = num_heads
         self.d_k = self.hidden_size // self.num_heads
 
-        self.key_lin = nn.Linear(hidden_size, hidden_size)
-        self.query_lin = nn.Linear(hidden_size, hidden_size)
-        self.val_lin = nn.Linear(hidden_size, hidden_size)
-        self.dropout = nn.Dropout(drop_prob)
-        self.out = nn.Linear(hidden_size, hidden_size)
+        self.key_lin = nn.Linear(hidden_size, hidden_size).to(device)
+        self.query_lin = nn.Linear(hidden_size, hidden_size).to(device)
+        self.val_lin = nn.Linear(hidden_size, hidden_size).to(device)
+        self.dropout = nn.Dropout(drop_prob).to(device)
+        self.out = nn.Linear(hidden_size, hidden_size).to(device)
 
     def forward(self, x, mask=None):
         batch_size = x.size(0)
