@@ -386,7 +386,7 @@ class QAEncoder(nn.Module):
         x = self.feedforward(x)
         x = self.relu(x)
         x = x + start_state
-        x.to(back)
+        x.cpu()
         return x
 
 
