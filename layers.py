@@ -336,14 +336,14 @@ class QAEncoder(nn.Module):
         self.num_heads = 10 # Likewise, this was suggested by the QANet paper
         self.drop_prob = drop_prob
         # Layer Norms - N.B. designed to handle input size different to hidden size
-        self.init_layer_norm = nn.LayerNorm(input_size).to(device)
+        self.init_layer_norm = nn.LayerNorm(input_size)
         self.layer_norm = nn.LayerNorm(hidden_size).to(device)
         # Convolutions - N.B. designed to handle input size different to hidden size
         self.init_conv = nn.Conv1d(in_channels=input_size,
                                    out_channels=hidden_size,
                                    kernel_size=self.kernel_size,
                                    padding=3,
-                                   groups=hidden_size).to(device)
+                                   groups=hidden_size)
         self.convs = []
         for i in range(num_layers-1):
             self.convs.append(nn.Conv1d(in_channels=hidden_size,
