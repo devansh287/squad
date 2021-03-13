@@ -360,12 +360,12 @@ class QAEncoder(nn.Module):
 
     def forward(self, x):
         #convert to cuda
-        self.init_layer_norm.to(device)
-        self.layer_norm.to(device)
-        self.init_conv.to(device)
+        self.init_layer_norm = self.init_layer_norm.to(device)
+        self.layer_norm=self.layer_norm.to(device)
+        self.init_conv=self.init_conv.to(device)
         for conv in self.convs:
-            conv.to(device)
-        self.feedforward.to(device)
+            conv=conv.to(device)
+        self.feedforward=self.feedforward.to(device)
 
 
         # Convolution layers
@@ -532,10 +532,10 @@ class MultiHeadSelfAttention(nn.Module):
         seq_len = x.size(1)
 
         #converting to cuda
-        self.key_lin.to(device)
-        self.query_lin.to(device)
-        self.val_lin.to(device)
-        self.out.to(device)
+        self.key_lin=self.key_lin.to(device)
+        self.query_lin=self.query_lin.to(device)
+        self.val_lin=self.val_lin.to(device)
+        self.out=self.out.to(device)
 
         key = self.key_lin(x)
         key = key.view(batch_size, seq_len, self.num_heads, self.d_k)
