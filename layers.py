@@ -505,7 +505,7 @@ class MultiHeadSelfAttention(nn.Module):
 
         self.key_lin = nn.Linear(hidden_size, hidden_size).to(device)
         self.query_lin = nn.Linear(hidden_size, hidden_size).to(device)
-        self.val_lin = nn.Linear(hidden_size, hidden_size)
+        self.val_lin = nn.Linear(hidden_size, hidden_size).to(device)
         self.dropout = nn.Dropout(drop_prob)
         self.out = nn.Linear(hidden_size, hidden_size)
 
