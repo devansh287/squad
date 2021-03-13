@@ -373,7 +373,7 @@ class QAEncoder(nn.Module):
             start_state = x
             x = self.layer_norm(x)
             x = torch.transpose(x, 1, 2)
-            x = conv(x.cuda())
+            x = conv(x.cpu())
             x = torch.transpose(x, 1, 2)
             x = x + start_state
 
