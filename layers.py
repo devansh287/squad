@@ -439,8 +439,8 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        x.to(device)
-        self.pe = self.pe.to(device)
+        #x.to(device)
+        #self.pe = self.pe.to(device)
         x = x + self.pe[:x.size(0), :]
         x = x.cpu()
         self.pe = self.pe.cpu()
