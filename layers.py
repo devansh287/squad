@@ -506,11 +506,11 @@ class ContextQueryAttention(nn.Module):
         c = c.cpu()
         q = q.cpu()
         # Shapes: (batch_size, c_len, q_len)
-        s0 = torch.matmul(c, self.c_weight).cpu().expand([-1, -1, q_len])
-        s1 = torch.matmul(q, self.q_weight).cpu().transpose(1, 2) \
+        s0 = torch.matmul(c.cpu(), self.c_weight.cpu()).cpu().expand([-1, -1, q_len])
+        s1 = torch.matmul(q.cpu(), self.q_weight.cpu()).cpu().transpose(1, 2) \
             .expand([-1, c_len, -1])
-        s2 = torch.matmul(c * self.cq_weight, q.transpose(1, 2)).cpu()
-        s = s0 + s1 + s2 + self.bias
+        s2 = torch.matmul(c.cpu() * self.cq_weight.cpu(), q.transpose(1, 2)).cpu()
+        s = s0.cpu() + s1.cpu() + s2.cpu() + self.bias.cpu()
 
         return s
 
