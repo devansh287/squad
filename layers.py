@@ -336,26 +336,26 @@ class QAEncoder(nn.Module):
         self.num_heads = 10 # Likewise, this was suggested by the QANet paper
         self.drop_prob = drop_prob
         # Layer Norms - N.B. designed to handle input size different to hidden size
-        self.init_layer_norm = nn.LayerNorm(input_size).to(device)
-        self.layer_norm = nn.LayerNorm(hidden_size).to(device)
+        self.init_layer_norm = nn.LayerNorm(input_size)
+        self.layer_norm = nn.LayerNorm(hidden_size)
         # Convolutions - N.B. designed to handle input size different to hidden size
         self.init_conv = nn.Conv1d(in_channels=input_size,
                                    out_channels=hidden_size,
                                    kernel_size=self.kernel_size,
                                    padding=3,
-                                   groups=hidden_size).to(device)
+                                   groups=hidden_size)
         self.convs = []
         for i in range(num_layers-1):
             self.convs.append(nn.Conv1d(in_channels=hidden_size,
                                         out_channels=hidden_size,
                                         kernel_size=self.kernel_size,
                                         padding=3,
-                                        groups=hidden_size).to(device))
+                                        groups=hidden_size))
         # Multi-Head Self Attention
-        self.att = MultiHeadSelfAttention(hidden_size, self.num_heads, drop_prob=drop_prob).to(device)
+        self.att = MultiHeadSelfAttention(hidden_size, self.num_heads, drop_prob=drop_prob)
         self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob)
         #Feedforward Network
-        self.feedforward = nn.Linear(hidden_size, hidden_size).to(device)
+        self.feedforward = nn.Linear(hidden_size, hidden_size)
         self.relu = nn.ReLU()
 
     def forward(self, x):
@@ -398,13 +398,13 @@ class QAEncoder(nn.Module):
         x = x + start_state
 
         """
-        x = x.cpu()
-        self.init_layer_norm  = self.init_layer_norm.cpu()
-        self.layer_norm=self.layer_norm.cpu()
-        self.init_conv=self.init_conv.cpu()
+        # x = x.cpu()
+        self.init_layer_norm = self.init_layer_norm.cpu()
+        self.layer_norm = self.layer_norm.cpu()
+        self.init_conv = self.init_conv.cpu()
         for i in range(len(self.convs)):
             self.convs[i] = self.convs[i].cpu()
-        self.feedforward=self.feedforward.cpu()
+        self.feedforward = self.feedforward.cpu()
         """
         return x
    
