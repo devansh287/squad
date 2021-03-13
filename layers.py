@@ -460,14 +460,18 @@ class ContextQueryAttention(nn.Module):
     def __init__(self, hidden_size, drop_prob=0.1):
         super(ContextQueryAttention, self).__init__()
         self.drop_prob = drop_prob
-        self.c_weight = nn.Parameter(torch.zeros(hidden_size, 1))
-        self.q_weight = nn.Parameter(torch.zeros(hidden_size, 1))
-        self.cq_weight = nn.Parameter(torch.zeros(1, 1, hidden_size))
+        self.c_weight = nn.Parameter(torch.zeros(hidden_size, 1)).cpu()
+        self.q_weight = nn.Parameter(torch.zeros(hidden_size, 1)).cpu()
+        self.cq_weight = nn.Parameter(torch.zeros(1, 1, hidden_size)).cpu()
         for weight in (self.c_weight, self.q_weight, self.cq_weight):
             nn.init.xavier_uniform_(weight)
-        self.bias = nn.Parameter(torch.zeros(1))
+        self.bias = nn.Parameter(torch.zeros(1)).cpu()
 
     def forward(self, c, q, c_mask, q_mask):
+        c = c.cpu()
+        q = q.cpu()
+        c_mask = c_mask.cpu()
+        q_mask = q_mask.cpu()
         batch_size, c_len, _ = c.size()
         q_len = q.size(1)
         s = self.get_similarity_matrix(c, q)        # (batch_size, c_len, q_len)
@@ -501,11 +505,11 @@ class ContextQueryAttention(nn.Module):
         q = F.dropout(q, self.drop_prob, self.training)  # (bs, q_len, hid_size)
 
         # Shapes: (batch_size, c_len, q_len)
-        s0 = torch.matmul(c.cpu(), self.c_weight.cpu()).expand([-1, -1, q_len])
-        s1 = torch.matmul(q.cpu(), self.q_weight.cpu()).transpose(1, 2) \
+        s0 = torch.matmul(c, self.c_weight).expand([-1, -1, q_len])
+        s1 = torch.matmul(q, self.q_weight).transpose(1, 2) \
             .expand([-1, c_len, -1])
-        s2 = torch.matmul(c.cpu() * self.cq_weight.cpu(), q.cpu().transpose(1, 2))
-        s = s0.cpu() + s1.cpu() + s2.cpu() + self.bias.cpu()
+        s2 = torch.matmul(c * self.cq_weight, q.transpose(1, 2))
+        s = s0 + s1 + s2 + self.bias
 
         return s
 
