@@ -457,7 +457,7 @@ class ContextQueryAttention(nn.Module):
         drop_prob (float): Probability of zero-ing out activations.
     """
     def __init__(self, hidden_size, drop_prob=0.1):
-        super(BiDAFAttention, self).__init__()
+        super(ContextQueryAttention, self).__init__()
         self.drop_prob = drop_prob
         self.c_weight = nn.Parameter(torch.zeros(hidden_size, 1))
         self.q_weight = nn.Parameter(torch.zeros(hidden_size, 1))
