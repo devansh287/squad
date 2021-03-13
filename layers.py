@@ -350,7 +350,7 @@ class QAEncoder(nn.Module):
                                         out_channels=hidden_size,
                                         kernel_size=self.kernel_size,
                                         padding=3,
-                                        groups=hidden_size))
+                                        groups=hidden_size).to(device))
         # Multi-Head Self Attention
         self.att = MultiHeadSelfAttention(hidden_size, self.num_heads, drop_prob=drop_prob)
         self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob)
