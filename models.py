@@ -144,18 +144,18 @@ class QANet(nn.Module):
                                     num_layers=self.encoder_conv_layers,
                                     drop_prob=drop_prob)
 
-        self.att = layers.BiDAFAttention(hidden_size=hidden_size,
+        self.att = layers.ContextQueryAttention(hidden_size=hidden_size,
                                          drop_prob=drop_prob)
 
         self.model_blocks = []
         for i in range(self.num_model_blocks):
-            self.model_blocks.append(layers.QAEncoder(input_size=hidden_size,
-                                                      hidden_size=hidden_size,
+            self.model_blocks.append(layers.QAEncoder(input_size=4*hidden_size,
+                                                      hidden_size=4*hidden_size,
                                                       num_layers=self.model_conv_layers,
                                                       drop_prob=drop_prob))
 
         # Caution: may have to write new output block in layers.py
-        self.out = layers.QAOutput(hidden_size=hidden_size)
+        self.out = layers.QAOutput(hidden_size=8*hidden_size)
 
     def forward(self, cw_idxs, cc_idxs, qw_idxs, qc_idxs):
         c_mask = torch.zeros_like(cw_idxs) != cw_idxs
@@ -187,8 +187,8 @@ class QANet(nn.Module):
             block3 = model_block(block3)
 
         # Concatenate model blocks to obtain start and end representations
-        start = torch.cat(block1, block2)
-        end = torch.cat(block2, block3)
+        start = torch.cat((block1, block2), 2)
+        end = torch.cat((block2, block3), 2)
 
         out = self.out(start, end, c_mask)
 

@@ -334,7 +334,7 @@ class QAEncoder(nn.Module):
         super(QAEncoder, self).__init__()
         # Hyperparameters
         self.kernel_size = 7 # paper suggest constant kernel size of 7 for both embeding encoder & model encoder
-        self.num_heads = 8 # Likewise, this was suggested by the QANet paper
+        self.num_heads = 10 # Likewise, this was suggested by the QANet paper
         self.drop_prob = drop_prob
         # Layer Norms - N.B. designed to handle input size different to hidden size
         self.init_layer_norm = nn.LayerNorm(input_size)
@@ -342,36 +342,47 @@ class QAEncoder(nn.Module):
         # Convolutions - N.B. designed to handle input size different to hidden size
         self.init_conv = nn.Conv1d(in_channels=input_size,
                                    out_channels=hidden_size,
-                                   kernel_size=self.kernel_size)
+                                   kernel_size=self.kernel_size,
+                                   padding=3,
+                                   groups=hidden_size)
         self.convs = []
         self.convs.append(self.init_conv)
         for i in range(num_layers-1):
             self.convs.append(nn.Conv1d(in_channels=hidden_size,
                                         out_channels=hidden_size,
-                                        kernel_size=self.kernel_size))
+                                        kernel_size=self.kernel_size,
+                                        padding=3,
+                                        groups=hidden_size))
         # Multi-Head Self Attention
-        #self.att = nn.MultiheadAttention(embed_dim=hidden_size, num_heads=self.num_heads, dropout=drop_prob)
-        self.pos_encoder = PositionalEncoding(hidden_size, dropout=drop_prob)
+        self.att = MultiHeadSelfAttention(hidden_size, self.num_heads, drop_prob=drop_prob)
+        self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob)
         #Feedforward Network
         self.feedforward = nn.Linear(hidden_size, hidden_size)
         self.relu = nn.ReLU()
 
     def forward(self, x):
         # Convolution layers
-        #x = self.init_layer_norm(x)     #(batch_size, 
-        #x = self.init_conv(x)
-        x = self.pos_encoder(x)
+        x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
+        x = self.init_layer_norm(x)     # (batch_size, seq_len, input_size)
+
+        (batch_size, seq_len, input_size) = x.size()
+        #x = x.view(batch_size * seq_len)
+        x = torch.transpose(x, 1, 2)    # (batch_size, input_size, seq_len)
+        x = self.init_conv(x)           # (batch_size, hidden_size, seq_len)
+        x = torch.transpose(x, 1, 2)
+
         for conv in self.convs:
             start_state = x
             x = self.layer_norm(x)
-
+            x = torch.transpose(x, 1, 2)
             x = conv(x)
+            x = torch.transpose(x, 1, 2)
             x = x + start_state
 
         # Self-attention layer
         start_state = x
         x = self.layer_norm(x)
-        #x = self.att(x)
+        x = self.att(x)
         x = x + start_state
 
         # Feedforward layer (preliminarily a single-layer perceptron)
@@ -390,7 +401,7 @@ class QAOutput(nn.Module):
     """
     def __init__(self, hidden_size):
         super(QAOutput, self).__init__()
-        self.linear = nn.Linear(hidden_size*2, 1)
+        self.linear = nn.Linear(hidden_size, 1)
 
     def forward(self, start, end, mask):
         # Shapes: (batch_size, seq_len, 1)
@@ -401,6 +412,7 @@ class QAOutput(nn.Module):
         log_p1 = masked_softmax(start_logits.squeeze(), mask, log_softmax=True)
         log_p2 = masked_softmax(end_logits.squeeze(), mask, log_softmax=True)
         return log_p1, log_p2
+
 
 class PositionalEncoding(nn.Module):
 
@@ -419,3 +431,116 @@ class PositionalEncoding(nn.Module):
     def forward(self, x):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
+
+
+class ContextQueryAttention(nn.Module):
+    """
+    Context-Query Attention for QANet
+    Currently identical to BiDAF attention
+    Potentially should be simplified to DCN attention
+
+    Args:
+        hidden_size (int): Size of hidden activations.
+        drop_prob (float): Probability of zero-ing out activations.
+    """
+    def __init__(self, hidden_size, drop_prob=0.1):
+        super(ContextQueryAttention, self).__init__()
+        self.drop_prob = drop_prob
+        self.c_weight = nn.Parameter(torch.zeros(hidden_size, 1))
+        self.q_weight = nn.Parameter(torch.zeros(hidden_size, 1))
+        self.cq_weight = nn.Parameter(torch.zeros(1, 1, hidden_size))
+        for weight in (self.c_weight, self.q_weight, self.cq_weight):
+            nn.init.xavier_uniform_(weight)
+        self.bias = nn.Parameter(torch.zeros(1))
+
+    def forward(self, c, q, c_mask, q_mask):
+        batch_size, c_len, _ = c.size()
+        q_len = q.size(1)
+        s = self.get_similarity_matrix(c, q)        # (batch_size, c_len, q_len)
+        c_mask = c_mask.view(batch_size, c_len, 1)  # (batch_size, c_len, 1)
+        q_mask = q_mask.view(batch_size, 1, q_len)  # (batch_size, 1, q_len)
+        s1 = masked_softmax(s, q_mask, dim=2)       # (batch_size, c_len, q_len)
+        s2 = masked_softmax(s, c_mask, dim=1)       # (batch_size, c_len, q_len)
+
+        # (bs, c_len, q_len) x (bs, q_len, hid_size) => (bs, c_len, hid_size)
+        a = torch.bmm(s1, q)
+        # (bs, c_len, c_len) x (bs, c_len, hid_size) => (bs, c_len, hid_size)
+        b = torch.bmm(torch.bmm(s1, s2.transpose(1, 2)), c)
+
+        x = torch.cat([c, a, c * a, c * b], dim=2)  # (bs, c_len, 4 * hid_size)
+
+        return x
+
+    def get_similarity_matrix(self, c, q):
+        """Get the "similarity matrix" between context and query (using the
+        terminology of the BiDAF paper).
+
+        A naive implementation as described in BiDAF would concatenate the
+        three vectors then project the result with a single weight matrix. This
+        method is a more memory-efficient implementation of the same operation.
+
+        See Also:
+            Equation 1 in https://arxiv.org/abs/1611.01603
+        """
+        c_len, q_len = c.size(1), q.size(1)
+        c = F.dropout(c, self.drop_prob, self.training)  # (bs, c_len, hid_size)
+        q = F.dropout(q, self.drop_prob, self.training)  # (bs, q_len, hid_size)
+
+        # Shapes: (batch_size, c_len, q_len)
+        s0 = torch.matmul(c, self.c_weight).expand([-1, -1, q_len])
+        s1 = torch.matmul(q, self.q_weight).transpose(1, 2) \
+            .expand([-1, c_len, -1])
+        s2 = torch.matmul(c * self.cq_weight, q.transpose(1, 2))
+        s = s0 + s1 + s2 + self.bias
+
+        return s
+
+
+class MultiHeadSelfAttention(nn.Module):
+    def __init__(self, hidden_size, num_heads, drop_prob = 0.1):
+        super().__init__()
+
+        self.hidden_size = hidden_size
+        self.num_heads = num_heads
+        self.d_k = self.hidden_size // self.num_heads
+
+        self.key_lin = nn.Linear(hidden_size, hidden_size)
+        self.query_lin = nn.Linear(hidden_size, hidden_size)
+        self.val_lin = nn.Linear(hidden_size, hidden_size)
+        self.dropout = nn.Dropout(drop_prob)
+        self.out = nn.Linear(hidden_size, hidden_size)
+
+    def forward(self, x, mask=None):
+        batch_size = x.size(0)
+        seq_len = x.size(1)
+        key = self.key_lin(x)
+        key = key.view(batch_size, seq_len, self.num_heads, self.d_k)
+        query = self.query_lin(x).view(batch_size, seq_len, self.num_heads, self.d_k)
+        value = self.val_lin(x).view(batch_size, seq_len, self.num_heads, self.d_k)
+
+        key = key.transpose(1,2)
+        query = query.transpose(1,2)
+        value = value.transpose(1,2)
+
+        scores = attention(query, key, value, self.d_k, mask, self.dropout)
+
+        result = scores.transpose(1,2).contiguous()
+        result = result.view(batch_size, seq_len, self.hidden_size)
+
+        output = self.out(result)
+
+        return output
+
+def attention(q, k, v, d_k, mask=None, dropout=None):
+
+    scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
+    if mask is not None:
+        mask = mask.unsqueeze(1)
+        scores = scores.masked_fill(mask == 0, -1e9)
+    scores = F.softmax(scores, dim=-1)
+
+    if dropout is not None:
+        scores = dropout(scores)
+
+    output = torch.matmul(scores, v)
+    return output
