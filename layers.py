@@ -352,8 +352,8 @@ class QAEncoder(nn.Module):
                                         padding=3,
                                         groups=hidden_size))
         # Multi-Head Self Attention
-        #self.att = MultiHeadSelfAttention(hidden_size, self.num_heads, drop_prob=drop_prob)
-        #self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob)
+        self.att = MultiHeadSelfAttention(hidden_size, self.num_heads, drop_prob=drop_prob)
+        self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob)
         #Feedforward Network
         self.feedforward = nn.Linear(hidden_size, hidden_size)
         self.relu = nn.ReLU()
@@ -367,9 +367,8 @@ class QAEncoder(nn.Module):
             conv=conv.to(device)
         self.feedforward=self.feedforward.to(device)
 
-
         # Convolution layers
-        #x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
+        x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
         x = x.to(device)
         x = self.init_layer_norm(x)     # (batch_size, seq_len, input_size)
         x = torch.transpose(x, 1, 2)    # (batch_size, input_size, seq_len)
@@ -386,7 +385,7 @@ class QAEncoder(nn.Module):
         # Self-attention layer
         start_state = x
         x = self.layer_norm(x)
-        #x = self.att(x)
+        x = self.att(x)
         x = x + start_state
 
         # Feedforward layer (preliminarily a single-layer perceptron)
@@ -439,8 +438,8 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        #x.to(device)
-        #self.pe = self.pe.to(device)
+        x.to(device)
+        self.pe = self.pe.to(device)
         x = x + self.pe[:x.size(0), :]
         x = x.cpu()
         self.pe = self.pe.cpu()
