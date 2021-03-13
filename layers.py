@@ -501,8 +501,8 @@ class ContextQueryAttention(nn.Module):
             Equation 1 in https://arxiv.org/abs/1611.01603
         """
         c_len, q_len = c.size(1), q.size(1)
-        c = F.dropout(c, self.drop_prob, self.training)  # (bs, c_len, hid_size)
-        q = F.dropout(q, self.drop_prob, self.training)  # (bs, q_len, hid_size)
+        c = F.dropout(c, self.drop_prob, self.training).cpu()  # (bs, c_len, hid_size)
+        q = F.dropout(q, self.drop_prob, self.training).cpu()  # (bs, q_len, hid_size)
 
         # Shapes: (batch_size, c_len, q_len)
         s0 = torch.matmul(c, self.c_weight).expand([-1, -1, q_len])
