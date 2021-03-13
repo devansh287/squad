@@ -376,8 +376,8 @@ class QAEncoder(nn.Module):
             x = torch.transpose(x, 1, 2)
             x = conv(x)
             x = torch.transpose(x, 1, 2)
-            x = x + start_state
             x = x.cuda()    # REMOVE FOR LOCAL TRAINING
+            x = x + start_state
 
         # Self-attention layer
         start_state = x
