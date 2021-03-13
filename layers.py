@@ -504,7 +504,7 @@ class ContextQueryAttention(nn.Module):
         s0 = torch.matmul(c.cpu(), self.c_weight.cpu()).expand([-1, -1, q_len])
         s1 = torch.matmul(q.cpu(), self.q_weight.cpu()).transpose(1, 2) \
             .expand([-1, c_len, -1])
-        s2 = torch.matmul(c * self.cq_weight, q.transpose(1, 2))
+        s2 = torch.matmul(c.cpu() * self.cq_weight.cpu(), q.cpu().transpose(1, 2))
         s = s0 + s1 + s2 + self.bias
 
         return s
