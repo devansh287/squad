@@ -363,13 +363,20 @@ class QAEncoder(nn.Module):
     def forward(self, x):
         # Convolution layers
         device = torch.device("cuda:0")
+        
+        self.pos_encoder.to(device)
+        self.init_layer_norm.to(device)
+        self.init_conv.to(device)
+        for conv in self.convs:
+            conv.to(device)
+            self.layer_norm.to(device)
+        x = x.to(device)
         x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
 
         x = self.init_layer_norm(x)     # (batch_size, seq_len, input_size)
         x = torch.transpose(x, 1, 2)    # (batch_size, input_size, seq_len)
         x = self.init_conv(x)           # (batch_size, hidden_size, seq_len)
         x = torch.transpose(x, 1, 2)
-        x = x.to(device)
         for conv in self.convs:
             start_state = x
             x = self.layer_norm(x)
