@@ -369,15 +369,13 @@ class QAEncoder(nn.Module):
         x = self.init_conv(x)           # (batch_size, hidden_size, seq_len)
         x = torch.transpose(x, 1, 2)
 
-        x = x.cpu() # REMOVE FOR LOCAL TRAINING
         for conv in self.convs:
             start_state = x
             x = self.layer_norm(x)
             x = torch.transpose(x, 1, 2)
-            x = conv(x)
+            x = conv(x.cuda())
             x = torch.transpose(x, 1, 2)
             x = x + start_state
-        x = x.cuda()    # REMOVE FOR LOCAL TRAINING
 
         # Self-attention layer
         start_state = x
@@ -497,6 +495,9 @@ class ContextQueryAttention(nn.Module):
 
 
 class MultiHeadSelfAttention(nn.Module):
+    """
+    Adapted from https://towardsdatascience.com/how-to-code-the-transformer-in-pytorch-24db27c8f9ec
+    """
     def __init__(self, hidden_size, num_heads, drop_prob = 0.1):
         super().__init__()
 
@@ -532,7 +533,9 @@ class MultiHeadSelfAttention(nn.Module):
         return output
 
 def attention(q, k, v, d_k, mask=None, dropout=None):
-
+    """
+    Taken from https://towardsdatascience.com/how-to-code-the-transformer-in-pytorch-24db27c8f9ec
+    """
     scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
     if mask is not None:
         mask = mask.unsqueeze(1)
