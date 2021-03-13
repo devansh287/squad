@@ -174,7 +174,7 @@ class QANet(nn.Module):
                        c_mask, q_mask)   # (batch_size, c_len, hidden_size)
 
         # Model blocks - repeat 3 times with same parameters
-        block1 = att
+        block1 = att.cuda()
         for model_block in self.model_blocks:
             block1 = model_block(block1)
 
