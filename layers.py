@@ -355,7 +355,7 @@ class QAEncoder(nn.Module):
         self.att = MultiHeadSelfAttention(hidden_size, self.num_heads, drop_prob=drop_prob).to(device)
         self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob)
         #Feedforward Network
-        self.feedforward = nn.Linear(hidden_size, hidden_size)
+        self.feedforward = nn.Linear(hidden_size, hidden_size).to(device)
         self.relu = nn.ReLU()
 
     def forward(self, x):
