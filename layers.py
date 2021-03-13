@@ -395,13 +395,13 @@ class QAEncoder(nn.Module):
         x = self.feedforward(x)
         x = self.relu(x)
         x = x + start_state
-        x.to(back)
-        self.init_layer_norm.to(back)
-        self.layer_norm.to(back)
-        self.init_conv.to(back)
+        x = x.cpu()
+        self.init_layer_norm  = self.init_layer_norm.cpu()
+        self.layer_norm=self.layer_norm.cpu()
+        self.init_conv=self.init_conv.cpu()
         for conv in self.convs:
-            conv.to(back)
-        self.feedforward.to(back)
+            conv=conv.cpu()
+        self.feedforward=self.feedforward.cpu()
         return x
    
 
@@ -430,7 +430,7 @@ class PositionalEncoding(nn.Module):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
-        pe = torch.zeros(max_len, d_model).to(device)
+        pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
@@ -440,7 +440,10 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x):
         x.to(device)
+        self.pe = self.pe.to(device)
         x = x + self.pe[:x.size(0), :]
+        x = x.cpu()
+        self.pe = self.pe.cpu()
         return self.dropout(x)
 
 
@@ -550,10 +553,10 @@ class MultiHeadSelfAttention(nn.Module):
         output = self.out(result)
 
         #converting back
-        self.key_lin.to(back)
-        self.query_lin.to(back)
-        self.val_lin.to(back)
-        self.out.to(back)
+        self.key_lin=self.key_lin.cpu()
+        self.query_lin=self.query_lin.cpu()
+        self.val_lin=self.val_lin.cpu()
+        self.out=self.out.cpu()
 
         return output
 
