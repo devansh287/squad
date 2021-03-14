@@ -168,26 +168,21 @@ class QANet(nn.Module):
 
         # Encoding
         c_enc = self.enc(c_emb)     # (batch_size, c_len, hidden_size)
+        print('Finished context encoding')
         q_enc = self.enc(q_emb)     # (batch_size, q_len, hidden_size)
+        print('Finished query encoding')
 
-        print(torch.cuda.memory_cached())
-        print(torch.cuda.memory_allocated())
         # Context-query attention
         att = self.att(c_enc, q_enc, c_mask, q_mask)   # (batch_size, c_len, hidden_size)
         del c_enc
         del q_enc
 
-        print(torch.cuda.memory_cached())
-        print(torch.cuda.memory_allocated())
 
         # Model blocks - repeat 3 times with same parameters
         block1 = att
-        del att
         for model_block in self.model_blocks:
             block1 = model_block(block1)
-
-        print(torch.cuda.memory_cached())
-        print(torch.cuda.memory_allocated())
+        del att
 
         block2 = block1
         for model_block in self.model_blocks:

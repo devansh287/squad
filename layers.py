@@ -359,6 +359,9 @@ class QAEncoder(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
+        print('start')
+        print(torch.cuda.memory_allocated(device=device))
+
         #convert to cuda
         self.init_layer_norm = self.init_layer_norm.to(device)
         self.layer_norm = self.layer_norm.to(device)
@@ -368,8 +371,12 @@ class QAEncoder(nn.Module):
         self.att = self.att.to(device)
         self.feedforward = self.feedforward.to(device)
 
+        print('after cuda conversion')
+        print(torch.cuda.memory_allocated(device=device))
+
         # Convolution layers
         x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
+
         #x = x.to(device)
         x = self.init_layer_norm(x)     # (batch_size, seq_len, input_size)
         x = torch.transpose(x, 1, 2)    # (batch_size, input_size, seq_len)
@@ -403,6 +410,9 @@ class QAEncoder(nn.Module):
             self.convs[i] = self.convs[i].cpu()
         self.att = self.att.cpu()
         self.feedforward = self.feedforward.cpu()
+
+        print('after cpu conversion')
+        print(torch.cuda.memory_allocated(device=device))
         return x
    
 
