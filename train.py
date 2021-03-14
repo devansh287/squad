@@ -125,12 +125,9 @@ def main(args):
                 print(next(model.parameters()).is_cuda)
                 log_p1, log_p2 = model(cw_idxs, cc_idxs, qw_idxs, qc_idxs)
                 y1, y2 = y1.to(device), y2.to(device)
-                log_p1, log_p2 = log_p1.cpu(), log_p2.cpu()
                 loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
                 loss_val = loss.item()
 
-                model = model.cpu()
-                loss = loss.cpu()
                 print('2')
                 print(next(model.parameters()).is_cuda)
 
@@ -141,7 +138,6 @@ def main(args):
                 nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
                 print('4')
                 print(next(model.parameters()).is_cuda)
-                model = model.to(device)
                 optimizer.step()
                 print('5')
                 print(next(model.parameters()).is_cuda)
