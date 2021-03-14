@@ -447,7 +447,7 @@ class PositionalEncoding(nn.Module):
         self.pe = self.pe.to(device)
         x = x + self.pe[:x.size(0), :]
         #x = x.cpu()
-        self.pe = self.pe.cpu()
+        #self.pe = self.pe.cpu()
         return self.dropout(x)
 
 
