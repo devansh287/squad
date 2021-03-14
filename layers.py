@@ -389,7 +389,7 @@ class QAEncoder(nn.Module):
         x = self.layer_norm(x)
         x = self.att(x)
         x = x + start_state
-        del start_state
+        #del start_state
 
         # Feedforward layer (preliminarily a single-layer perceptron)
         start_state = x
@@ -559,15 +559,15 @@ class MultiHeadSelfAttention(nn.Module):
 
         #scores = attention(query, key, value, self.d_k, mask, self.dropout)
 
-        del key
-        del query
-        del value
+        #del key
+        #del query
+        #del value
 
         result = scores.transpose(1,2).contiguous()
         result = result.view(batch_size, seq_len, self.hidden_size)
         output = self.out(result)
-        del scores
-        del result
+        #del scores
+        #del result
 
         #converting back
         self.key_lin=self.key_lin.cpu()
