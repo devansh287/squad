@@ -370,6 +370,7 @@ class QAEncoder(nn.Module):
         self.feedforward = self.feedforward.to(device)
 
         # Convolution layers
+        x = x.cpu()
         x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
         x = x.to(device)
         x = self.init_layer_norm(x)     # (batch_size, seq_len, input_size)
