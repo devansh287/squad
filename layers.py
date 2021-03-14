@@ -405,7 +405,6 @@ class QAEncoder(nn.Module):
             self.convs[i] = self.convs[i].cpu()
         self.att = self.att.cpu()
         self.feedforward = self.feedforward.cpu()
-        x = x.cpu()
 
         return x
    
