@@ -195,6 +195,6 @@ class QANet(nn.Module):
 
         out = self.out(start, end, c_mask)
 
-        new_out = (out[0].cuda(), out[2].cuda())
+        new_out = (out[0].cuda(), out[1].cuda())
 
         return new_out
