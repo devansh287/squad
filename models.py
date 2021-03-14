@@ -182,8 +182,12 @@ class QANet(nn.Module):
 
         # Model blocks - repeat 3 times with same parameters
         block1 = att
+        del att
         for model_block in self.model_blocks:
             block1 = model_block(block1)
+
+        print(torch.cuda.memory_cached())
+        print(torch.cuda.memory_allocated())
 
         block2 = block1
         for model_block in self.model_blocks:
