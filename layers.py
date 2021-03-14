@@ -361,8 +361,8 @@ class QAEncoder(nn.Module):
     def forward(self, x):
 
         #convert to cuda
-        """
         self.init_layer_norm = self.init_layer_norm.to(device)
+        """
         self.init_conv = self.init_conv.to(device)
         self.layer_norm = self.layer_norm.to(device)
         """
