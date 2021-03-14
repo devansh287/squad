@@ -129,8 +129,8 @@ def main(args):
 
                 # Backward
                 loss.backward()
-                model = model.to(device)
                 nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                model = model.to(device)
                 optimizer.step()
                 scheduler.step(step // batch_size)
                 ema(model, step // batch_size)
