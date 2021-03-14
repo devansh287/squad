@@ -129,18 +129,19 @@ def main(args):
                 loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
                 loss_val = loss.item()
 
-                model = model.cpu()
+                #model = model.cpu()
+                loss = loss.cpu()
                 print('2')
                 print(next(model.parameters()).is_cuda)
 
                 # Backward
                 loss.backward()
-                model = model.to(device)
                 print('3')
                 print(next(model.parameters()).is_cuda)
                 nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
                 print('4')
                 print(next(model.parameters()).is_cuda)
+                model = model.to(device)
                 optimizer.step()
                 print('5')
                 print(next(model.parameters()).is_cuda)
