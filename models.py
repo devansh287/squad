@@ -176,7 +176,7 @@ class QANet(nn.Module):
         del q_enc
 
         # Model blocks - repeat 3 times with same parameters
-        block1 = att.cuda()
+        block1 = att
         for model_block in self.model_blocks:
             block1 = model_block(block1)
         del att
