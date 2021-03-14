@@ -23,6 +23,9 @@ from tqdm import tqdm
 from ujson import load as json_load
 from util import collate_fn, SQuAD
 
+def cuda_or_cpu(item):
+    if item.is_cuda is True: return "Cuda"
+    return "CPU"
 
 def main(args):
     # Set up logging and devices
@@ -122,29 +125,36 @@ def main(args):
 
                 # Forward
                 print('1')
-                print(next(model.parameters()).is_cuda)
+                print(cuda_or_cpu(next(model.parameters())))
                 log_p1, log_p2 = model(cw_idxs, cc_idxs, qw_idxs, qc_idxs)
                 y1, y2 = y1.to(device), y2.to(device)
                 loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
                 loss_val = loss.item()
-
+                #model = model.cpu()
                 print('2')
-                print(next(model.parameters()).is_cuda)
-
+                print("model - ", cuda_or_cpu(next(model.parameters())))
                 # Backward
+                
+                print("log_p1 - ", cuda_or_cpu(log_p1), "log_p2 - ", cuda_or_cpu(log_p2))
+                print("y1 - ", cuda_or_cpu(y1), " y2 - ", cuda_or_cpu(y2))
+                print("loss - ", cuda_or_cpu(loss))
                 loss.backward()
                 print('3')
-                print(next(model.parameters()).is_cuda)
+                print(cuda_or_cpu(next(model.parameters())))
                 nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
                 print('4')
-                print(next(model.parameters()).is_cuda)
-                model = model.cpu()
+                print(cuda_or_cpu(next(model.parameters())))
+                #model = model.cpu()
+                optimizer = optimizer.cuda()
                 optimizer.step()
                 print('5')
-                print(next(model.parameters()).is_cuda)
+                print(cuda_or_cpu(next(model.parameters())))
                 scheduler.step(step // batch_size)
                 print('6')
-                print(next(model.parameters()).is_cuda)
+                print(cuda_or_cpu(next(model.parameters())))
+                #model = model.cuda()
+                print('7')
+                print(cuda_or_cpu(next(model.parameters())))
                 ema(model, step // batch_size)
 
                 # Log info
