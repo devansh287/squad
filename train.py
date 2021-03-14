@@ -129,6 +129,7 @@ def main(args):
                 loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
                 loss_val = loss.item()
 
+                model = model.cpu()
                 print('2')
                 print(next(model.parameters()).is_cuda)
 
