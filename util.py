@@ -197,9 +197,7 @@ class EMA:
         for name, param in model.named_parameters():
             if param.requires_grad:
                 assert name in self.shadow
-                
-                print(" param - ", cuda_or_cpu(param.is_cuda))
-                
+                                
                 new_average = \
                     (1.0 - decay) * param.data + decay * self.shadow[name]
                 self.shadow[name] = new_average.clone()

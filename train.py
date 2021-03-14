@@ -76,6 +76,7 @@ def main(args):
         step = 0
     model = model.to(device)
     model.train()
+    #print("Model status - ", cuda_or_cpu(model))
     ema = util.EMA(model, args.ema_decay)
 
     # Get saver
@@ -124,39 +125,22 @@ def main(args):
                 optimizer.zero_grad()
 
                 # Forward
-                print('1')
-                print(cuda_or_cpu(next(model.parameters())))
                 log_p1, log_p2 = model(cw_idxs, cc_idxs, qw_idxs, qc_idxs)
                 y1, y2 = y1.to(device), y2.to(device)
                 loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
                 loss_val = loss.item()
-                #model = model.cpu()
-                print('2')
-                print("model - ", cuda_or_cpu(next(model.parameters())))
-                # Backward
-                
-                print("log_p1 - ", cuda_or_cpu(log_p1), "log_p2 - ", cuda_or_cpu(log_p2))
-                print("y1 - ", cuda_or_cpu(y1), " y2 - ", cuda_or_cpu(y2))
-                print("loss - ", cuda_or_cpu(loss))
-                loss.backward()
-                print('3')
-                print(cuda_or_cpu(next(model.parameters())))
-                nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
-                print('4')
-                print(cuda_or_cpu(next(model.parameters())))
-                #model = model.cpu()
-                optimizer = optimizer.cuda()
-                optimizer.step()
-                print('5')
-                print(cuda_or_cpu(next(model.parameters())))
-                scheduler.step(step // batch_size)
-                print('6')
-                print(cuda_or_cpu(next(model.parameters())))
-                #model = model.cuda()
-                print('7')
-                print(cuda_or_cpu(next(model.parameters())))
-                ema(model, step // batch_size)
 
+                # Backward
+                loss.backward()
+                nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                optimizer.step()
+
+                #print(torch.cuda.memory_allocated(device=None))
+                scheduler.step(step // batch_size)
+                ema(model, step // batch_size)
+                torch.cuda.empty_cache()
+
+                
                 # Log info
                 step += batch_size
                 progress_bar.update(batch_size)

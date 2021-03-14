@@ -7,12 +7,12 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import util
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from util import masked_softmax
 
-device = torch.device("cuda:0")
-back = torch.device("cpu:0")
+device, _______ = util.get_available_devices()
+#back = torch.device("cpu:0")
 class Embedding(nn.Module):
     """Embedding layer used by BiDAF, without the character-level component.
 
@@ -352,7 +352,7 @@ class QAEncoder(nn.Module):
                                         padding=3,
                                         groups=hidden_size))
         # Multi-Head Self Attention
-        self.att = MultiHeadSelfAttention(hidden_size, self.num_heads, drop_prob=drop_prob)
+        self.att = nn.MultiheadAttention(hidden_size, self.num_heads, dropout=drop_prob)
         self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob)
         #Feedforward Network
         self.feedforward = nn.Linear(hidden_size, hidden_size)
@@ -366,9 +366,8 @@ class QAEncoder(nn.Module):
         self.layer_norm = self.layer_norm.to(device)
         for i in range(len(self.convs)):
             self.convs[i] = self.convs[i].to(device)
-        """
         self.att = self.att.to(device)
-        """
+    
         self.feedforward = self.feedforward.to(device)
 
         # Convolution layers
@@ -389,7 +388,7 @@ class QAEncoder(nn.Module):
         # Self-attention layer
         start_state = x
         x = self.layer_norm(x)
-        x = self.att(x)
+        x, ____ = self.att(x,x,x)
         x = x + start_state
         #del start_state
 
@@ -400,6 +399,7 @@ class QAEncoder(nn.Module):
         x = self.relu(x)
         x = x + start_state
 
+        '''
         self.init_layer_norm = self.init_layer_norm.cpu()
         self.layer_norm = self.layer_norm.cpu()
         self.init_conv = self.init_conv.cpu()
@@ -409,7 +409,7 @@ class QAEncoder(nn.Module):
         self.att = self.att.cpu()
         """
         self.feedforward = self.feedforward.cpu()
-
+        '''
         return x
    
 
@@ -450,8 +450,8 @@ class PositionalEncoding(nn.Module):
         x.to(device)
         self.pe = self.pe.to(device)
         x = x + self.pe[:x.size(0), :]
-        x = x.cpu()
-        self.pe = self.pe.cpu()
+        #x = x.cpu()
+        #self.pe = self.pe.cpu()
         return self.dropout(x)
 
 
@@ -517,84 +517,51 @@ class ContextQueryAttention(nn.Module):
 
         return s
 
-
-class MultiHeadSelfAttention(nn.Module):
+class CausalSelfAttention(nn.Module):
     """
-    Adapted from https://towardsdatascience.com/how-to-code-the-transformer-in-pytorch-24db27c8f9ec
+    A vanilla multi-head masked self-attention layer with a projection at the end.
+    I believe I could have just used torch.nn.MultiheadAttention but their documentation
+    is all but absent and code ugly so I don't trust it, rolling my own here.
     """
     def __init__(self, hidden_size, num_heads, drop_prob = 0.1):
         super().__init__()
-
+        # key, query, value projections for all heads
         self.hidden_size = hidden_size
         self.num_heads = num_heads
         self.d_k = self.hidden_size // self.num_heads
 
-        self.key_lin = nn.Linear(hidden_size, hidden_size)
-        self.query_lin = nn.Linear(hidden_size, hidden_size)
-        self.val_lin = nn.Linear(hidden_size, hidden_size)
-        self.dropout = nn.Dropout(drop_prob)
-        self.out = nn.Linear(hidden_size, hidden_size)
-
-    def forward(self, x, mask=None):
-        batch_size = x.size(0)
-        seq_len = x.size(1)
-
-        #converting to cuda
-        self.key_lin=self.key_lin.to(device)
-        self.query_lin=self.query_lin.to(device)
-        self.val_lin=self.val_lin.to(device)
-        self.out=self.out.to(device)
-
-        key = self.key_lin(x)
-        key = key.view(batch_size, seq_len, self.num_heads, self.d_k)
-        query = self.query_lin(x).view(batch_size, seq_len, self.num_heads, self.d_k)
-        value = self.val_lin(x).view(batch_size, seq_len, self.num_heads, self.d_k)
-
-        key = key.transpose(1,2)
-        query = query.transpose(1,2)
-        value = value.transpose(1,2)\
-        # .contiguous().view(batch_size * self.num_heads, seq_len, self.d_k)
+        self.key = nn.Linear(hidden_size, hidden_size).to(device)
+        self.query = nn.Linear(hidden_size, hidden_size).to(device)
+        self.value = nn.Linear(hidden_size, hidden_size).to(device)
 
 
-        scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(self.d_k)
-        scores = F.softmax(scores, dim=-1)
-        scores = self.dropout(scores)
-        scores = torch.matmul(scores, value)
+        # regularization
+        self.attn_drop = nn.Dropout(drop_prob)
+        self.resid_drop = nn.Dropout(drop_prob)
+        # output projection
+        self.proj = nn.Linear(hidden_size, hidden_size).to(device)
+        # causal mask to ensure that attention is only applied to the left in the input sequence
+        #self.register_buffer("mask", torch.tril(torch.ones(config.block_size, config.block_size))
+        #                            .view(1, 1, config.block_size, config.block_size))
+        self.n_head = num_heads
 
-        #scores = attention(query, key, value, self.d_k, mask, self.dropout)
+    def forward(self, x, layer_past=None):
+        
+        B, T, C = x.size()
 
-        #del key
-        #del query
-        #del value
+        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
+        k = self.key(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        q = self.query(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        v = self.value(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
 
-        result = scores.transpose(1,2).contiguous()
-        result = result.view(batch_size, seq_len, self.hidden_size)
-        output = self.out(result)
-        #del scores
-        #del result
+        # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
+        att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
+        #att = att.masked_fill(self.mask[:,:,:T,:T] == 0, -1e10) # todo: just use float('-inf') instead?
+        att = F.softmax(att, dim=-1)
+        att = self.attn_drop(att)
+        y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
+        y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
 
-        #converting back
-        self.key_lin=self.key_lin.cpu()
-        self.query_lin=self.query_lin.cpu()
-        self.val_lin=self.val_lin.cpu()
-        self.out=self.out.cpu()
-
-        return output
-
-
-def attention(q, k, v, d_k, mask=None, dropout=None):
-    """
-    Taken from https://towardsdatascience.com/how-to-code-the-transformer-in-pytorch-24db27c8f9ec
-    """
-    scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
-    if mask is not None:
-        mask = mask.unsqueeze(1)
-        scores = scores.masked_fill(mask == 0, -1e9)
-    scores = F.softmax(scores, dim=-1)
-
-    if dropout is not None:
-        scores = dropout(scores)
-
-    output = torch.matmul(scores, v)
-    del scores
-    return output
+        # output projection
+        y = self.resid_drop(self.proj(y))
+        return y
