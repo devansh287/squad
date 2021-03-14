@@ -230,6 +230,7 @@ def add_train_test_args(parser):
                         type=lambda s: s.lower().startswith('t'),
                         default=True,
                         help='Whether to use SQuAD 2.0 (unanswerable) questions.')
+    # default 100
     parser.add_argument('--hidden_size',
                         type=int,
                         default=50,
