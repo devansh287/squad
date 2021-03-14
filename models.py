@@ -158,6 +158,7 @@ class QANet(nn.Module):
         self.out = layers.QAOutput(hidden_size=8*hidden_size)
 
     def forward(self, cw_idxs, cc_idxs, qw_idxs, qc_idxs):
+        torch.cuda.empty_cache()
         print(torch.cuda.memory_cached())
         print(torch.cuda.memory_allocated())
 
