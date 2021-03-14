@@ -557,6 +557,10 @@ class MultiHeadSelfAttention(nn.Module):
 
         scores = attention(query, key, value, self.d_k, mask, self.dropout)
 
+        del key
+        del query
+        del value
+
         result = scores.transpose(1,2).contiguous()
         result = result.view(batch_size, seq_len, self.hidden_size)
         output = self.out(result)
