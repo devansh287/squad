@@ -171,7 +171,7 @@ class QANet(nn.Module):
         q_enc = self.enc(q_emb)     # (batch_size, q_len, hidden_size)
 
         # Context-query attention
-        att = self.att(c_enc.cuda(), q_enc.cuda(), c_mask.cuda(), q_mask.cuda())   # (batch_size, c_len, hidden_size)
+        att = self.att(c_enc, q_enc, c_mask, q_mask)   # (batch_size, c_len, hidden_size)
         del c_enc
         del q_enc
 
