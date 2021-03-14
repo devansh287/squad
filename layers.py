@@ -403,7 +403,7 @@ class QAEncoder(nn.Module):
         x = self.relu(x)
         x = x + start_state
 
-        """
+        x = x.cpu()
         self.init_layer_norm = self.init_layer_norm.cpu()
         self.layer_norm = self.layer_norm.cpu()
         self.init_conv = self.init_conv.cpu()
@@ -411,7 +411,6 @@ class QAEncoder(nn.Module):
             self.convs[i] = self.convs[i].cpu()
         self.att = self.att.cpu()
         self.feedforward = self.feedforward.cpu()
-        """
 
         print('after cpu conversion')
         print(torch.cuda.memory_allocated(device=device))
