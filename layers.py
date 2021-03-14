@@ -361,6 +361,7 @@ class QAEncoder(nn.Module):
     def forward(self, x):
 
         #convert to cuda
+        x = x.cuda()
         self.init_layer_norm = self.init_layer_norm.to(device)
         self.layer_norm = self.layer_norm.to(device)
         self.init_conv = self.init_conv.to(device)
@@ -397,6 +398,7 @@ class QAEncoder(nn.Module):
         x = self.relu(x)
         x = x + start_state
 
+        x = x.cpu()
         self.init_layer_norm = self.init_layer_norm.cpu()
         self.layer_norm = self.layer_norm.cpu()
         self.init_conv = self.init_conv.cpu()
@@ -443,10 +445,10 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x):
         #x.to(device)
-        self.pe = self.pe.to(device)
+        #self.pe = self.pe.to(device)
         x = x + self.pe[:x.size(0), :]
         #x = x.cpu()
-        self.pe = self.pe.cpu()
+        #self.pe = self.pe.cpu()
         return self.dropout(x)
 
 
@@ -535,10 +537,12 @@ class MultiHeadSelfAttention(nn.Module):
         seq_len = x.size(1)
 
         #converting to cuda
+        """
         self.key_lin=self.key_lin.to(device)
         self.query_lin=self.query_lin.to(device)
         self.val_lin=self.val_lin.to(device)
         self.out=self.out.to(device)
+        """
 
         key = self.key_lin(x)
         key = key.view(batch_size, seq_len, self.num_heads, self.d_k)
@@ -569,10 +573,12 @@ class MultiHeadSelfAttention(nn.Module):
         del result
 
         #converting back
+        """
         self.key_lin=self.key_lin.cpu()
         self.query_lin=self.query_lin.cpu()
         self.val_lin=self.val_lin.cpu()
         self.out=self.out.cpu()
+        """
 
         return output
 
