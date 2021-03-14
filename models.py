@@ -193,6 +193,6 @@ class QANet(nn.Module):
         start = torch.cat((block1, block2), 2)
         end = torch.cat((block2, block3), 2)
 
-        out = self.out(start, end, c_mask)
+        out = self.out(start.cpu(), end.cpu(), c_mask.cpu())
 
-        return out.cpu()
+        return out
