@@ -537,6 +537,8 @@ class MultiHeadSelfAttention(nn.Module):
         self.out = nn.Linear(hidden_size, hidden_size)
 
     def forward(self, x, mask=None):
+        print('Start of Self Attention:')
+        print(torch.cuda.memory_allocated(device=device))
         batch_size = x.size(0)
         seq_len = x.size(1)
 
@@ -546,16 +548,28 @@ class MultiHeadSelfAttention(nn.Module):
         self.val_lin=self.val_lin.to(device)
         self.out=self.out.to(device)
 
+        print('After Cuda conversion::')
+        print(torch.cuda.memory_allocated(device=device))
+
         key = self.key_lin(x)
         key = key.view(batch_size, seq_len, self.num_heads, self.d_k)
         query = self.query_lin(x).view(batch_size, seq_len, self.num_heads, self.d_k)
         value = self.val_lin(x).view(batch_size, seq_len, self.num_heads, self.d_k)
 
+        print('After K,Q,V calculation:')
+        print(torch.cuda.memory_allocated(device=device))
+
         key = key.transpose(1,2)
         query = query.transpose(1,2)
         value = value.transpose(1,2)
 
+        print('After Transpose:')
+        print(torch.cuda.memory_allocated(device=device))
+
         scores = attention(query, key, value, self.d_k, mask, self.dropout)
+
+        print('After Attention:')
+        print(torch.cuda.memory_allocated(device=device))
 
         del key
         del query
@@ -565,12 +579,17 @@ class MultiHeadSelfAttention(nn.Module):
         result = result.view(batch_size, seq_len, self.hidden_size)
         output = self.out(result)
 
+        print('After Out Layer:')
+        print(torch.cuda.memory_allocated(device=device))
+
         #converting back
         self.key_lin=self.key_lin.cpu()
         self.query_lin=self.query_lin.cpu()
         self.val_lin=self.val_lin.cpu()
         self.out=self.out.cpu()
 
+        print('End of Self Attention:')
+        print(torch.cuda.memory_allocated(device=device))
         return output
 
 
