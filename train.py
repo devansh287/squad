@@ -128,7 +128,7 @@ def main(args):
                 loss_val = loss.item()
 
                 # Backward
-                model = model.cpu()
+                model = model.to(device)
                 loss.backward()
                 model = model.to(device)
                 nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
