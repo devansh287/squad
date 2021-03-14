@@ -359,7 +359,7 @@ class QAEncoder(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        print('start')
+        print('start:')
         print(torch.cuda.memory_allocated(device=device))
 
         #convert to cuda
@@ -371,23 +371,11 @@ class QAEncoder(nn.Module):
         self.att = self.att.to(device)
         self.feedforward = self.feedforward.to(device)
 
-        print('after cuda conversion')
-        print(torch.cuda.memory_allocated(device=device))
-
         # Convolution layers
         x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
-
-        print('after pos encoder')
-        print(torch.cuda.memory_allocated(device=device))
-
-        #x = x.to(device)
         x = self.init_layer_norm(x)     # (batch_size, seq_len, input_size)
-        print('after init layer norm:')
-        print(torch.cuda.memory_allocated(device=device))
         x = torch.transpose(x, 1, 2)    # (batch_size, input_size, seq_len)
         x = self.init_conv(x)           # (batch_size, hidden_size, seq_len)
-        print('after init conv:')
-        print(torch.cuda.memory_allocated(device=device))
         x = torch.transpose(x, 1, 2)
         for conv in self.convs:
             start_state = x
@@ -404,7 +392,7 @@ class QAEncoder(nn.Module):
         x = self.att(x)
         x = x + start_state
         del start_state
-        print('after attention:')
+        print('after self-attention:')
         print(torch.cuda.memory_allocated(device=device))
         # Feedforward layer (preliminarily a single-layer perceptron)
         start_state = x
@@ -412,8 +400,7 @@ class QAEncoder(nn.Module):
         x = self.feedforward(x)
         x = self.relu(x)
         x = x + start_state
-        print('after feedforward:')
-        print(torch.cuda.memory_allocated(device=device))
+
         self.init_layer_norm = self.init_layer_norm.cpu()
         self.layer_norm = self.layer_norm.cpu()
         self.init_conv = self.init_conv.cpu()
@@ -422,7 +409,7 @@ class QAEncoder(nn.Module):
         self.att = self.att.cpu()
         self.feedforward = self.feedforward.cpu()
 
-        print('after cpu conversion')
+        print('end:')
         print(torch.cuda.memory_allocated(device=device))
         return x
    
@@ -554,12 +541,10 @@ class MultiHeadSelfAttention(nn.Module):
         seq_len = x.size(1)
 
         #converting to cuda
-        """
         self.key_lin=self.key_lin.to(device)
         self.query_lin=self.query_lin.to(device)
         self.val_lin=self.val_lin.to(device)
         self.out=self.out.to(device)
-        """
 
         key = self.key_lin(x)
         key = key.view(batch_size, seq_len, self.num_heads, self.d_k)
@@ -577,12 +562,10 @@ class MultiHeadSelfAttention(nn.Module):
         output = self.out(result)
 
         #converting back
-        """
         self.key_lin=self.key_lin.cpu()
         self.query_lin=self.query_lin.cpu()
         self.val_lin=self.val_lin.cpu()
         self.out=self.out.cpu()
-        """
 
         return output
 
