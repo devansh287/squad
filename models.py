@@ -167,8 +167,8 @@ class QANet(nn.Module):
         q_emb = self.emb(qw_idxs, qc_idxs)         # (batch_size, q_len, hidden_size)
 
         # Encoding
-        c_enc = self.enc(c_emb.cuda())     # (batch_size, c_len, hidden_size)
-        q_enc = self.enc(q_emb.cuda())     # (batch_size, q_len, hidden_size)
+        c_enc = self.enc(c_emb)     # (batch_size, c_len, hidden_size)
+        q_enc = self.enc(q_emb)     # (batch_size, q_len, hidden_size)
 
         # Context-query attention
         att = self.att(c_enc.cuda(), q_enc.cuda(), c_mask.cuda(), q_mask.cuda())   # (batch_size, c_len, hidden_size)
