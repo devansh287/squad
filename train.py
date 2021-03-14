@@ -135,10 +135,10 @@ def main(args):
 
                 # Backward
                 loss.backward()
+                model = model.to(device)
                 print('3')
                 print(next(model.parameters()).is_cuda)
                 nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
-                model = model.to(device)
                 print('4')
                 print(next(model.parameters()).is_cuda)
                 optimizer.step()
