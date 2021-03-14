@@ -158,6 +158,9 @@ class QANet(nn.Module):
         self.out = layers.QAOutput(hidden_size=8*hidden_size)
 
     def forward(self, cw_idxs, cc_idxs, qw_idxs, qc_idxs):
+        print(torch.cuda.memory_cached())
+        print(torch.cuda.memory_allocated())
+
         c_mask = torch.zeros_like(cw_idxs) != cw_idxs
         q_mask = torch.zeros_like(qw_idxs) != qw_idxs
 
@@ -165,6 +168,8 @@ class QANet(nn.Module):
         c_emb = self.emb(cw_idxs, cc_idxs)         # (batch_size, c_len, hidden_size)
         q_emb = self.emb(qw_idxs, qc_idxs)         # (batch_size, q_len, hidden_size)
 
+        print(torch.cuda.memory_cached())
+        print(torch.cuda.memory_allocated())
         # Encoding
         c_enc = self.enc(c_emb)     # (batch_size, c_len, hidden_size)
         q_enc = self.enc(q_emb)     # (batch_size, q_len, hidden_size)
