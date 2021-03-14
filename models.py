@@ -169,11 +169,16 @@ class QANet(nn.Module):
         # Encoding
         c_enc = self.enc(c_emb)     # (batch_size, c_len, hidden_size)
         q_enc = self.enc(q_emb)     # (batch_size, q_len, hidden_size)
-        torch.cuda.empty_cache()
+
         print(torch.cuda.memory_cached())
         print(torch.cuda.memory_allocated())
         # Context-query attention
         att = self.att(c_enc, q_enc, c_mask, q_mask)   # (batch_size, c_len, hidden_size)
+        del c_enc
+        del q_enc
+
+        print(torch.cuda.memory_cached())
+        print(torch.cuda.memory_allocated())
 
         # Model blocks - repeat 3 times with same parameters
         block1 = att
