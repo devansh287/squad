@@ -168,15 +168,12 @@ class QANet(nn.Module):
 
         # Encoding
         c_enc = self.enc(c_emb)     # (batch_size, c_len, hidden_size)
-        print('Finished context encoding')
         q_enc = self.enc(q_emb)     # (batch_size, q_len, hidden_size)
-        print('Finished query encoding')
 
         # Context-query attention
         att = self.att(c_enc, q_enc, c_mask, q_mask)   # (batch_size, c_len, hidden_size)
         del c_enc
         del q_enc
-
 
         # Model blocks - repeat 3 times with same parameters
         block1 = att
@@ -198,4 +195,4 @@ class QANet(nn.Module):
 
         out = self.out(start, end, c_mask)
 
-        return out
+        return out.cpu()

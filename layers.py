@@ -359,8 +359,6 @@ class QAEncoder(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        print('start:')
-        print(torch.cuda.memory_allocated(device=device))
 
         #convert to cuda
         self.init_layer_norm = self.init_layer_norm.to(device)
@@ -384,16 +382,14 @@ class QAEncoder(nn.Module):
             x = conv(x)
             x = torch.transpose(x, 1, 2)
             x = x + start_state
-        print('after all convs:')
-        print(torch.cuda.memory_allocated(device=device))
+
         # Self-attention layer
         start_state = x
         x = self.layer_norm(x)
         x = self.att(x)
         x = x + start_state
         del start_state
-        print('after self-attention:')
-        print(torch.cuda.memory_allocated(device=device))
+
         # Feedforward layer (preliminarily a single-layer perceptron)
         start_state = x
         x = self.layer_norm(x)
@@ -409,8 +405,6 @@ class QAEncoder(nn.Module):
         self.att = self.att.cpu()
         self.feedforward = self.feedforward.cpu()
 
-        print('end:')
-        print(torch.cuda.memory_allocated(device=device))
         return x
    
 
@@ -537,8 +531,6 @@ class MultiHeadSelfAttention(nn.Module):
         self.out = nn.Linear(hidden_size, hidden_size)
 
     def forward(self, x, mask=None):
-        print('Start of Self Attention:')
-        print(torch.cuda.memory_allocated(device=device))
         batch_size = x.size(0)
         seq_len = x.size(1)
 
@@ -548,36 +540,23 @@ class MultiHeadSelfAttention(nn.Module):
         self.val_lin=self.val_lin.to(device)
         self.out=self.out.to(device)
 
-        print('After Cuda conversion::')
-        print(torch.cuda.memory_allocated(device=device))
-
         key = self.key_lin(x)
         key = key.view(batch_size, seq_len, self.num_heads, self.d_k)
         query = self.query_lin(x).view(batch_size, seq_len, self.num_heads, self.d_k)
         value = self.val_lin(x).view(batch_size, seq_len, self.num_heads, self.d_k)
-
-        print('After K,Q,V calculation:')
-        print(torch.cuda.memory_allocated(device=device))
 
         key = key.transpose(1,2)
         query = query.transpose(1,2)
         value = value.transpose(1,2)\
         # .contiguous().view(batch_size * self.num_heads, seq_len, self.d_k)
 
-        print('After Transpose:')
-        print(torch.cuda.memory_allocated(device=device))
 
         scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(self.d_k)
-        print('After Matmul 1:')
-        print(torch.cuda.memory_allocated(device=device))
         scores = F.softmax(scores, dim=-1)
         scores = self.dropout(scores)
         scores = torch.matmul(scores, value)
 
         #scores = attention(query, key, value, self.d_k, mask, self.dropout)
-
-        print('After Attention:')
-        print(torch.cuda.memory_allocated(device=device))
 
         del key
         del query
@@ -589,17 +568,12 @@ class MultiHeadSelfAttention(nn.Module):
         del scores
         del result
 
-        print('After Out Layer:')
-        print(torch.cuda.memory_allocated(device=device))
-
         #converting back
         self.key_lin=self.key_lin.cpu()
         self.query_lin=self.query_lin.cpu()
         self.val_lin=self.val_lin.cpu()
         self.out=self.out.cpu()
 
-        print('End of Self Attention:')
-        print(torch.cuda.memory_allocated(device=device))
         return output
 
 
