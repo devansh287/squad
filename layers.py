@@ -559,9 +559,10 @@ class MultiHeadSelfAttention(nn.Module):
         print('After K,Q,V calculation:')
         print(torch.cuda.memory_allocated(device=device))
 
-        key = key.transpose(1,2).contiguous().view(batch_size * self.num_heads, seq_len, self.d_k)
-        query = query.transpose(1,2).contiguous().view(batch_size * self.num_heads, seq_len, self.d_k)
-        value = value.transpose(1,2).contiguous().view(batch_size * self.num_heads, seq_len, self.d_k)
+        key = key.transpose(1,2)
+        query = query.transpose(1,2)
+        value = value.transpose(1,2)\
+        # .contiguous().view(batch_size * self.num_heads, seq_len, self.d_k)
 
         print('After Transpose:')
         print(torch.cuda.memory_allocated(device=device))
