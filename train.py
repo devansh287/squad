@@ -130,7 +130,7 @@ def main(args):
                 # Backward
                 loss.backward()
                 nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
-                print(next(model.parameters()).is_cuda)
+                model.to(device)
                 optimizer.step()
                 scheduler.step(step // batch_size)
                 ema(model, step // batch_size)
