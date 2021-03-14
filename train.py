@@ -121,17 +121,28 @@ def main(args):
                 optimizer.zero_grad()
 
                 # Forward
+                print('1')
+                print(next(model.parameters()).is_cuda)
                 log_p1, log_p2 = model(cw_idxs, cc_idxs, qw_idxs, qc_idxs)
                 y1, y2 = y1.to(device), y2.to(device)
                 # log_p1, log_p2 = log_p1.to(device), log_p2.to(device)
                 loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
                 loss_val = loss.item()
 
+                print('2')
+                print(next(model.parameters()).is_cuda)
+
                 # Backward
                 loss.backward()
+                print('3')
+                print(next(model.parameters()).is_cuda)
                 nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
                 model = model.to(device)
+                print('4')
+                print(next(model.parameters()).is_cuda)
                 optimizer.step()
+                print('5')
+                print(next(model.parameters()).is_cuda)
                 scheduler.step(step // batch_size)
                 ema(model, step // batch_size)
 
