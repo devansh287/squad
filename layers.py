@@ -403,7 +403,7 @@ class QAEncoder(nn.Module):
         x = self.layer_norm(x)
         x = self.att(x)
         x = x + start_state
-        torch.cuda.empty_cache()
+        del start_state
         print('after attention:')
         print(torch.cuda.memory_allocated(device=device))
         # Feedforward layer (preliminarily a single-layer perceptron)
