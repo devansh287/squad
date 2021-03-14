@@ -138,6 +138,7 @@ def main(args):
                 nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
                 print('4')
                 print(next(model.parameters()).is_cuda)
+                model = model.cpu()
                 optimizer.step()
                 print('5')
                 print(next(model.parameters()).is_cuda)
