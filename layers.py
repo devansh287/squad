@@ -368,8 +368,8 @@ class QAEncoder(nn.Module):
             self.convs[i] = self.convs[i].to(device)
         """
         self.att = self.att.to(device)
-        self.feedforward = self.feedforward.to(device)
         """
+        self.feedforward = self.feedforward.to(device)
 
         # Convolution layers
         x = self.pos_encoder(x)         # (batch_size, seq_len, input_size)
