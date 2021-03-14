@@ -363,9 +363,7 @@ class QAEncoder(nn.Module):
         #convert to cuda
         self.init_layer_norm = self.init_layer_norm.to(device)
         self.init_conv = self.init_conv.to(device)
-        """
         self.layer_norm = self.layer_norm.to(device)
-        """
         for i in range(len(self.convs)):
             self.convs[i] = self.convs[i].to(device)
         """
