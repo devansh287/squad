@@ -578,6 +578,8 @@ class MultiHeadSelfAttention(nn.Module):
         result = scores.transpose(1,2).contiguous()
         result = result.view(batch_size, seq_len, self.hidden_size)
         output = self.out(result)
+        del scores
+        del result
 
         print('After Out Layer:')
         print(torch.cuda.memory_allocated(device=device))
