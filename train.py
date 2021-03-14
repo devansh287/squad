@@ -138,7 +138,7 @@ def main(args):
                 #print(torch.cuda.memory_allocated(device=None))
                 scheduler.step(step // batch_size)
                 ema(model, step // batch_size)
-                torch.cuda.empty_cache()
+                #torch.cuda.empty_cache()
 
                 
                 # Log info
