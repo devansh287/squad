@@ -143,6 +143,8 @@ def main(args):
                 print('5')
                 print(next(model.parameters()).is_cuda)
                 scheduler.step(step // batch_size)
+                print('6')
+                print(next(model.parameters()).is_cuda)
                 ema(model, step // batch_size)
 
                 # Log info
