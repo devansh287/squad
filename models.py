@@ -145,7 +145,7 @@ class QANet(nn.Module):
                                     drop_prob=drop_prob)
 
         self.att = layers.ContextQueryAttention(hidden_size=hidden_size,
-                                         drop_prob=drop_prob)
+                                                drop_prob=drop_prob)
 
         self.model_blocks = []
         for i in range(self.num_model_blocks):
@@ -195,6 +195,6 @@ class QANet(nn.Module):
 
         out = self.out(start, end, c_mask)
 
-        cpu_out = (out[0].cpu(), out[1].cpu())
+        #cpu_out = (out[0].cpu(), out[1].cpu())
 
         return out

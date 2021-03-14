@@ -399,17 +399,13 @@ class QAEncoder(nn.Module):
         x = self.relu(x)
         x = x + start_state
 
-        '''
         self.init_layer_norm = self.init_layer_norm.cpu()
         self.layer_norm = self.layer_norm.cpu()
         self.init_conv = self.init_conv.cpu()
         for i in range(len(self.convs)):
             self.convs[i] = self.convs[i].cpu()
-        """
         self.att = self.att.cpu()
-        """
         self.feedforward = self.feedforward.cpu()
-        '''
         return x
    
 
@@ -450,8 +446,8 @@ class PositionalEncoding(nn.Module):
         x.to(device)
         self.pe = self.pe.to(device)
         x = x + self.pe[:x.size(0), :]
-        #x = x.cpu()
-        #self.pe = self.pe.cpu()
+        x = x.cpu()
+        self.pe = self.pe.cpu()
         return self.dropout(x)
 
 
