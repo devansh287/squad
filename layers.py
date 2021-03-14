@@ -559,21 +559,19 @@ class MultiHeadSelfAttention(nn.Module):
         print('After K,Q,V calculation:')
         print(torch.cuda.memory_allocated(device=device))
 
-        key = key.transpose(1,2)
-        query = query.transpose(1,2)
-        value = value.transpose(1,2)
+        key = key.transpose(1,2).view(batch_size * self.num_heads, seq_len, self.d_k)
+        query = query.transpose(1,2).view(batch_size * self.num_heads, seq_len, self.d_k)
+        value = value.transpose(1,2).view(batch_size * self.num_heads, seq_len, self.d_k)
 
         print('After Transpose:')
         print(torch.cuda.memory_allocated(device=device))
 
-        torch.cuda.empty_cache()
         scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(self.d_k)
         print('After Matmul 1:')
         print(torch.cuda.memory_allocated(device=device))
         scores = F.softmax(scores, dim=-1)
         scores = self.dropout(scores)
         scores = torch.matmul(scores, value)
-        torch.cuda.empty_cache()
 
         #scores = attention(query, key, value, self.d_k, mask, self.dropout)
 
