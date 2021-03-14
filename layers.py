@@ -609,4 +609,5 @@ def attention(q, k, v, d_k, mask=None, dropout=None):
         scores = dropout(scores)
 
     output = torch.matmul(scores, v)
+    del scores
     return output
