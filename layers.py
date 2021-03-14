@@ -368,7 +368,7 @@ class QAEncoder(nn.Module):
         self.init_conv = self.init_conv.to(device)
         for i in range(len(self.convs)):
             self.convs[i] = self.convs[i].to(device)
-        # self.att = self.att.to(device)
+        self.att = self.att.to(device)
         self.feedforward = self.feedforward.to(device)
 
         print('after cuda conversion')
@@ -403,6 +403,7 @@ class QAEncoder(nn.Module):
         x = self.layer_norm(x)
         x = self.att(x)
         x = x + start_state
+        torch.cuda.empty_cache()
         print('after attention:')
         print(torch.cuda.memory_allocated(device=device))
         # Feedforward layer (preliminarily a single-layer perceptron)
@@ -418,7 +419,7 @@ class QAEncoder(nn.Module):
         self.init_conv = self.init_conv.cpu()
         for i in range(len(self.convs)):
             self.convs[i] = self.convs[i].cpu()
-        # self.att = self.att.cpu()
+        self.att = self.att.cpu()
         self.feedforward = self.feedforward.cpu()
 
         print('after cpu conversion')
