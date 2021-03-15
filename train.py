@@ -160,9 +160,9 @@ def main(args):
 
                     # Evaluate and save checkpoint
                     log.info(f'Evaluating at step {step}...')
-                    print('Memory 1: ', torch.cuda.memory_allocated())
+                    # print('Memory 1: ', torch.cuda.memory_allocated())
                     ema.assign(model)
-                    print('Memory 2: ', torch.cuda.memory_allocated())
+                    # print('Memory 2: ', torch.cuda.memory_allocated())
                     results, pred_dict = evaluate(model, dev_loader, device,
                                                   args.dev_eval_file,
                                                   args.max_ans_len,
@@ -188,7 +188,7 @@ def main(args):
 
 def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2):
     nll_meter = util.AverageMeter()
-    print('Memory 3: ', torch.cuda.memory_allocated())
+    # print('Memory 3: ', torch.cuda.memory_allocated())
     model.eval()
     pred_dict = {}
     with open(eval_file, 'r') as fh:
@@ -196,25 +196,27 @@ def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2):
     with torch.no_grad(), \
             tqdm(total=len(data_loader.dataset)) as progress_bar:
         for cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids in data_loader:
-            print('Memory at start of loop section: ', torch.cuda.memory_allocated())
+            # print('Memory at start of loop section: ', torch.cuda.memory_allocated())
             # Setup for forward
             cw_idxs = cw_idxs.to(device)
             cc_idxs = cc_idxs.to(device)
             qw_idxs = qw_idxs.to(device)
             qc_idxs = qc_idxs.to(device)
             batch_size = cw_idxs.size(0)
-            print('Memory Before Forward Pass: ', torch.cuda.memory_allocated())
+            # print('Memory Before Forward Pass: ', torch.cuda.memory_allocated())
             # Forward
             log_p1, log_p2 = model(cw_idxs, cc_idxs, qw_idxs, qc_idxs)
-            print('Memory After Forward Pass: ', torch.cuda.memory_allocated())
+            # print('Memory After Forward Pass: ', torch.cuda.memory_allocated())
             y1, y2 = y1.to(device), y2.to(device)
             loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
-            print('Memory After Loss Calc: ', torch.cuda.memory_allocated())
+            # print('Memory After Loss Calc: ', torch.cuda.memory_allocated())
             nll_meter.update(loss.item(), batch_size)
 
             # Get F1 and EM scores
             p1, p2 = log_p1.exp(), log_p2.exp()
             starts, ends = util.discretize(p1, p2, max_len, use_squad_v2)
+            print('Max start idx score: ', torch.max(starts))
+            print('Max End idx score: ', torch.max(ends))
 
             # Log info
             progress_bar.update(batch_size)
