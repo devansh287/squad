@@ -48,8 +48,13 @@ def main(args):
     model = BiDAF(word_vectors=word_vectors,
                   hidden_size=args.hidden_size,
                   drop_prob=args.drop_prob)
-    """
     model = QANet(word_vectors=word_vectors,
+                      char_vectors=char_vectors,
+                      emb_size=char_vectors.size(1),
+                      hidden_size=args.hidden_size,
+                      drop_prob=args.drop_prob)
+    """
+    model = charBiDAF(word_vectors=word_vectors,
                       char_vectors=char_vectors,
                       emb_size=char_vectors.size(1),
                       hidden_size=args.hidden_size,
