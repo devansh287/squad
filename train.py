@@ -100,6 +100,7 @@ def main(args):
                                    num_workers=args.num_workers,
                                    collate_fn=collate_fn)
     dev_dataset = SQuAD(args.dev_record_file, args.use_squad_v2)
+    torch.utils.data._utils.MP_STATUS_CHECK_INTERVAL = 300
     dev_loader = data.DataLoader(dev_dataset,
                                  batch_size=args.batch_size,
                                  shuffle=False,
