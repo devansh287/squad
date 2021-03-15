@@ -94,7 +94,7 @@ def main(args):
     # Get data loader
     log.info('Building dataset...')
     train_dataset = SQuAD(args.train_record_file, args.use_squad_v2)
-    torch.utils.data._utils.MP_STATUS_CHECK_INTERVAL = 300
+    #torch.utils.data._utils.MP_STATUS_CHECK_INTERVAL = 300
     train_loader = data.DataLoader(train_dataset,
                                    batch_size=args.batch_size,
                                    shuffle=True,
@@ -105,7 +105,7 @@ def main(args):
     dev_loader = data.DataLoader(dev_dataset,
                                  batch_size=args.batch_size,
                                  shuffle=False,
-                                 num_workers=args.num_workers,
+                                 num_workers=1,
                                  collate_fn=collate_fn)
 
     # Train
