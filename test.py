@@ -44,19 +44,18 @@ def main(args):
 
     # Get model
     log.info('Building model...')
-
+    """
     model = BiDAF(word_vectors=word_vectors,
                   hidden_size=args.hidden_size)
-    """
     model = QANet(word_vectors=word_vectors,
                       char_vectors=char_vectors,
                       emb_size=char_vectors.size(1),
                       hidden_size=args.hidden_size)
+    """
     model = charBiDAF(word_vectors=word_vectors,
                       char_vectors=char_vectors,
                       emb_size=char_vectors.size(1),
                       hidden_size=args.hidden_size)
-    """
     model = nn.DataParallel(model, gpu_ids)
     log.info(f'Loading checkpoint from {args.load_path}...')
     model = util.load_model(model, args.load_path, gpu_ids, return_step=False)
