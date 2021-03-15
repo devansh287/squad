@@ -233,7 +233,7 @@ def add_train_test_args(parser):
     # default 100
     parser.add_argument('--hidden_size',
                         type=int,
-                        default=50,
+                        default=40,
                         help='Number of features in encoder hidden layers.')
     parser.add_argument('--num_visuals',
                         type=int,
