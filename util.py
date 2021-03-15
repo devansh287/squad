@@ -414,11 +414,12 @@ def visualize(tbx, pred_dict, eval_path, step, split, num_visuals):
         eval_dict = json.load(eval_file)
     for i, id_ in enumerate(visual_ids):
         pred = pred_dict[id_] or 'N/A'
+        if (pred != 'N/A'):
+            print(pred)
         example = eval_dict[str(id_)]
         question = example['question']
         context = example['context']
         answers = example['answers']
-
         gold = answers[0] if answers else 'N/A'
         tbl_fmt = (f'- **Question:** {question}\n'
                    + f'- **Context:** {context}\n'
