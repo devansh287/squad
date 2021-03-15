@@ -46,8 +46,7 @@ def main(args):
     log.info('Building model...')
 
     model = BiDAF(word_vectors=word_vectors,
-                  hidden_size=args.hidden_size,
-                  drop_prob=args.drop_prob)
+                  hidden_size=args.hidden_size)
     """
     model = QANet(word_vectors=word_vectors,
                       char_vectors=char_vectors,
