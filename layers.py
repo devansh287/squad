@@ -45,8 +45,11 @@ class charEmbedding(nn.Module):
         self.drop_prob = drop_prob
         self.wordEmbed = nn.Embedding.from_pretrained(word_vectors)
         self.charVectors = nn.Embedding.from_pretrained(char_vectors)
-        self.convs = nn.ModuleList([nn.Conv1d(in_channels=emb_size, out_channels=1, kernel_size=i) for i in range(2, 5)])
-        num_kernels = 3
+        self.convs = []
+        num_kernels = 0
+        for i in range(2, 5):
+            self.convs.append(nn.Conv1d(in_channels=emb_size, out_channels=1, kernel_size=i))
+            num_kernels += 1
         self.ReLU = nn.ReLU()
         self.pooling = nn.AdaptiveMaxPool1d(1)
         #self.charEmbed = nn.Conv1d(in_channels = 1, out_channels = 1)
@@ -62,7 +65,7 @@ class charEmbedding(nn.Module):
         (batch_size, seq_len, embed_size, max_word_len) = char_vec.size()
         char_vec = char_vec.view(batch_size * seq_len, embed_size, max_word_len)
         char_pooled = []
-        char_vec = char_vec.cuda()
+        char_vec = char_vec.cpu()
 
         for conv in self.convs:
             char_val = self.pooling(self.ReLU(conv(char_vec)))
@@ -73,7 +76,7 @@ class charEmbedding(nn.Module):
         output_dim = char_emb.size(1)
         char_emb = char_emb.view(batch_size, seq_len, output_dim)  # (batch_size, seq_len, num_kernels)
 
-        #char_emb = char_emb.cuda()
+        char_emb = char_emb.cuda()
         emb = torch.cat((word_emb, char_emb), 2) # (batch_size, seq_len, word_embed_size + num_kernels)
         emb = F.dropout(emb, self.drop_prob, self.training)
         emb = self.proj(emb)  # (batch_size, seq_len, hidden_size)
@@ -341,11 +344,13 @@ class QAEncoder(nn.Module):
                                    kernel_size=self.kernel_size,
                                    padding=3,
                                    groups=hidden_size)
-        self.convs = nn.ModuleList([nn.Conv1d(in_channels=hidden_size,
-                                out_channels=hidden_size,
-                                kernel_size=self.kernel_size,
-                                padding=3,
-                                groups=hidden_size) for i in range(num_layers-1)])
+        self.convs = []
+        for i in range(num_layers-1):
+            self.convs.append(nn.Conv1d(in_channels=hidden_size,
+                                        out_channels=hidden_size,
+                                        kernel_size=self.kernel_size,
+                                        padding=3,
+                                        groups=hidden_size))
         # Multi-Head Self Attention
         self.att = nn.MultiheadAttention(hidden_size, self.num_heads, dropout=drop_prob)
         self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob)

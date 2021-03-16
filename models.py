@@ -147,10 +147,12 @@ class QANet(nn.Module):
         self.att = layers.ContextQueryAttention(hidden_size=hidden_size,
                                                 drop_prob=drop_prob)
 
-        self.model_blocks = nn.ModuleList([layers.QAEncoder(input_size=4*hidden_size,
-                                                            hidden_size=4*hidden_size,
-                                                            num_layers=self.model_conv_layers,
-                                                            drop_prob=drop_prob) for i in range(self.num_model_blocks)])
+        self.model_blocks = []
+        for i in range(self.num_model_blocks):
+            self.model_blocks.append(layers.QAEncoder(input_size=4*hidden_size,
+                                                      hidden_size=4*hidden_size,
+                                                      num_layers=self.model_conv_layers,
+                                                      drop_prob=drop_prob))
 
         # Caution: may have to write new output block in layers.py
         self.out = layers.QAOutput(hidden_size=8*hidden_size)
