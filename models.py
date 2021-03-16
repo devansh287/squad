@@ -191,7 +191,7 @@ class QANet(nn.Module):
 
         # Concatenate model blocks to obtain start and end representations
         start = torch.cat((block1, block2), 2)
-        end = torch.cat((block2, block3), 2)
+        end = torch.cat((block1, block3), 2)
 
         out = self.out(start, end, c_mask)
 
