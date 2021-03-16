@@ -45,11 +45,8 @@ class charEmbedding(nn.Module):
         self.drop_prob = drop_prob
         self.wordEmbed = nn.Embedding.from_pretrained(word_vectors)
         self.charVectors = nn.Embedding.from_pretrained(char_vectors)
-        self.convs = []
-        num_kernels = 0
-        for i in range(2, 5):
-            self.convs.append(nn.Conv1d(in_channels=emb_size, out_channels=1, kernel_size=i))
-            num_kernels += 1
+        self.convs = nn.ModuleList([nn.Conv1d(in_channels=emb_size, out_channels=1, kernel_size=i) for i in range(2, 5)])
+        num_kernels = 3
         self.ReLU = nn.ReLU()
         self.pooling = nn.AdaptiveMaxPool1d(1)
         #self.charEmbed = nn.Conv1d(in_channels = 1, out_channels = 1)
@@ -344,13 +341,11 @@ class QAEncoder(nn.Module):
                                    kernel_size=self.kernel_size,
                                    padding=3,
                                    groups=hidden_size)
-        self.convs = []
-        for i in range(num_layers-1):
-            self.convs.append(nn.Conv1d(in_channels=hidden_size,
-                                        out_channels=hidden_size,
-                                        kernel_size=self.kernel_size,
-                                        padding=3,
-                                        groups=hidden_size))
+        self.convs = nn.ModuleList([nn.Conv1d(in_channels=hidden_size,
+                                out_channels=hidden_size,
+                                kernel_size=self.kernel_size,
+                                padding=3,
+                                groups=hidden_size) for i in range(num_layers-1)])
         # Multi-Head Self Attention
         self.att = nn.MultiheadAttention(hidden_size, self.num_heads, dropout=drop_prob)
         self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob)
