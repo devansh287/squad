@@ -120,7 +120,7 @@ def get_train_args():
                         help='Name of dev metric to determine best checkpoint.')
     parser.add_argument('--max_checkpoints',
                         type=int,
-                        default=5,
+                        default=60,
                         help='Maximum number of checkpoints to keep on disk.')
     parser.add_argument('--max_grad_norm',
                         type=float,
