@@ -62,7 +62,7 @@ class charEmbedding(nn.Module):
         (batch_size, seq_len, embed_size, max_word_len) = char_vec.size()
         char_vec = char_vec.view(batch_size * seq_len, embed_size, max_word_len)
         char_pooled = []
-        #char_vec = char_vec.cpu()
+        char_vec = char_vec.cuda()
 
         for conv in self.convs:
             char_val = self.pooling(self.ReLU(conv(char_vec)))
