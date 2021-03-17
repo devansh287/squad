@@ -71,8 +71,13 @@ class BiDAF(nn.Module):
 
         return out
 
+
 class charBiDAF(nn.Module):
     """Modified Character Embedding BiDAF
+    Character embedding code can be seen in layers.py.
+    Additional arguments for char_vectors (list of pretrained character
+    vectors like word_vectors) and emb_size (dimension of pretrained
+    character vectors)
     """
     def __init__(self, word_vectors, char_vectors, emb_size, hidden_size, drop_prob=0.):
         super(charBiDAF, self).__init__()
@@ -123,8 +128,13 @@ class charBiDAF(nn.Module):
 ---------------------------- YOU ARE ENTERING TRANSFORMER ZONE ---------------------------
 """
 
+
 class QANet(nn.Module):
     """
+    QANet Model
+    Reuses BiDAF attention from baseline (here called ContextQueryAttention)
+    and character embeddings from charBiDAF.
+    All other layers are new and defined in layers.py
     Inspired by: https://arxiv.org/pdf/1804.09541.pdf
     """
     def __init__(self, word_vectors, char_vectors, emb_size, hidden_size, drop_prob=0.):

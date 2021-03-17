@@ -39,21 +39,29 @@ class Embedding(nn.Module):
 
         return emb
 
+
 class charEmbedding(nn.Module):
+    """
+    Character-level word embeddings.
+    Replacement for baseline model's embedding layer.
+    Convolves over characters to produce a character-level embedding
+    that is concatenated onto each word embedding.
+    """
     def __init__(self, word_vectors, char_vectors, emb_size, hidden_size, drop_prob):
         super(charEmbedding, self).__init__()
         self.drop_prob = drop_prob
+
         self.wordEmbed = nn.Embedding.from_pretrained(word_vectors)
         self.charVectors = nn.Embedding.from_pretrained(char_vectors)
+
         self.convs = []
         num_kernels = 0
         for i in range(2, 5):
             self.convs.append(nn.Conv1d(in_channels=emb_size, out_channels=1, kernel_size=i))
             num_kernels += 1
+
         self.ReLU = nn.ReLU()
         self.pooling = nn.AdaptiveMaxPool1d(1)
-        #self.charEmbed = nn.Conv1d(in_channels = 1, out_channels = 1)
-        #we might have to set the channels to zero
         self.proj = nn.Linear(word_vectors.size(1) + num_kernels, hidden_size, bias=False)
         self.hwy = HighwayEncoder(2, hidden_size)
 
@@ -231,6 +239,11 @@ class BiDAFAttention(nn.Module):
 class CoAttention(nn.Module):
     """
     Co-Attention
+    Replacement for the baseline BiDAF attention.
+    Uses a second-level attention computation on top of Context-to-Question
+    and Question-to-Context attention.
+    Result is then fed through a bidirectional LSTM to get an attention
+    output with the same sequence length as the context, c
     """
     def __init__(self, hidden_size, drop_prob=0.1):
         super(CoAttention, self).__init__()
@@ -316,6 +329,7 @@ class BiDAFOutput(nn.Module):
 """
 ---------------------------- YOU ARE ENTERING TRANSFORMER ZONE ---------------------------
 """
+
 
 class QAEncoder(nn.Module):
     """
@@ -411,7 +425,12 @@ class QAEncoder(nn.Module):
 
 class QAOutput(nn.Module):
     """
-    QANet output layer - adapted for compatibility with BiDAF output
+    QANet output layer.
+    Designed to be compatible with provided code.
+    Applies a linear layer and softmax to start and
+    end representations respectively to get probability
+    distributions over context length for start and end
+    positions of the answer.
     """
     def __init__(self, hidden_size):
         super(QAOutput, self).__init__()
@@ -429,14 +448,20 @@ class QAOutput(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
+    """
+    Transformer-style Positional Encodings
+    Returns sum of positional encoding (representing position of words) and input embedding x.
+    Code taken from PyTorch Transformer tutorial on sequence-to-sequence
+    modelling (https://pytorch.org/tutorials/beginner/transformer_tutorial.html#define-the-model)
+    with minor adaptations.
+    """
+    def __init__(self, hidden_size, drop_prob=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout = nn.Dropout(p=drop_prob)
 
-        pe = torch.zeros(max_len, d_model)
+        pe = torch.zeros(max_len, hidden_size)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        div_term = torch.exp(torch.arange(0, hidden_size, 2).float() * (-math.log(10000.0) / hidden_size))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0).transpose(0, 1)
@@ -512,52 +537,3 @@ class ContextQueryAttention(nn.Module):
         s = s0 + s1 + s2 + self.bias
 
         return s
-
-class CausalSelfAttention(nn.Module):
-    """
-    A vanilla multi-head masked self-attention layer with a projection at the end.
-    I believe I could have just used torch.nn.MultiheadAttention but their documentation
-    is all but absent and code ugly so I don't trust it, rolling my own here.
-    """
-    def __init__(self, hidden_size, num_heads, drop_prob = 0.1):
-        super().__init__()
-        # key, query, value projections for all heads
-        self.hidden_size = hidden_size
-        self.num_heads = num_heads
-        self.d_k = self.hidden_size // self.num_heads
-
-        self.key = nn.Linear(hidden_size, hidden_size).to(device)
-        self.query = nn.Linear(hidden_size, hidden_size).to(device)
-        self.value = nn.Linear(hidden_size, hidden_size).to(device)
-
-
-        # regularization
-        self.attn_drop = nn.Dropout(drop_prob)
-        self.resid_drop = nn.Dropout(drop_prob)
-        # output projection
-        self.proj = nn.Linear(hidden_size, hidden_size).to(device)
-        # causal mask to ensure that attention is only applied to the left in the input sequence
-        #self.register_buffer("mask", torch.tril(torch.ones(config.block_size, config.block_size))
-        #                            .view(1, 1, config.block_size, config.block_size))
-        self.n_head = num_heads
-
-    def forward(self, x, layer_past=None):
-        
-        B, T, C = x.size()
-
-        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-        k = self.key(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        q = self.query(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        v = self.value(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-
-        # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
-        att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-        #att = att.masked_fill(self.mask[:,:,:T,:T] == 0, -1e10) # todo: just use float('-inf') instead?
-        att = F.softmax(att, dim=-1)
-        att = self.attn_drop(att)
-        y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
-        y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
-
-        # output projection
-        y = self.resid_drop(self.proj(y))
-        return y
