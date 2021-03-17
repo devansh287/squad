@@ -367,7 +367,7 @@ class QAEncoder(nn.Module):
                                         groups=hidden_size))
         # Multi-Head Self Attention
         self.att = nn.MultiheadAttention(hidden_size, self.num_heads, dropout=drop_prob)
-        self.pos_encoder = PositionalEncoding(input_size, dropout=drop_prob)
+        self.pos_encoder = PositionalEncoding(input_size, drop_prob=drop_prob)
         #Feedforward Network
         self.feedforward = nn.Linear(hidden_size, hidden_size)
         self.relu = nn.ReLU()
